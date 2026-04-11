@@ -1,9 +1,9 @@
-import { FileText, Filter, Download, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Filter, Download, ArrowRight, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { Project, Clause } from '../types';
 import { useState } from 'react';
 
 interface DetailsProps {
-  currentProject: Project;
+  currentProject: Project | null;
   onOpenDrawer: (clause: Clause) => void;
   onDownload: () => void;
 }
@@ -11,6 +11,20 @@ interface DetailsProps {
 export default function Details({ currentProject, onOpenDrawer, onDownload }: DetailsProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 8;
+
+  if (!currentProject) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center">
+        <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 border border-slate-100 shadow-sm">
+          <ShieldAlert className="w-10 h-10 text-slate-300" />
+        </div>
+        <h3 className="text-xl font-serif text-ink mb-3">暂无违规明细</h3>
+        <p className="text-ink-muted max-w-md leading-relaxed">
+          请先在“新建审查任务”中提交隐私政策文本，系统分析完成后将在此处展示详细的违规条款与整改建议。
+        </p>
+      </div>
+    );
+  }
 
   const totalPages = Math.ceil(currentProject.clauses.length / ITEMS_PER_PAGE) || 1;
   const currentData = currentProject.clauses.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);

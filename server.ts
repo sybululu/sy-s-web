@@ -52,6 +52,15 @@ async function startServer() {
 
   app.use(express.json());
 
+  // 处理 AI Studio 平台的内部日志拉取请求，防止控制台一直报 404
+  app.get('/', (req, res, next) => {
+    if (req.query.logs === 'container') {
+      res.status(200).send('ok');
+      return;
+    }
+    next();
+  });
+
   // API Routes
   
   // 1. 获取历史项目列表

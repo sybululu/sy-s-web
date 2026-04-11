@@ -26,6 +26,20 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
     setCurrentPage(1);
   };
 
+  if (projects.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center">
+        <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 border border-slate-100 shadow-sm">
+          <FileText className="w-10 h-10 text-slate-300" />
+        </div>
+        <h3 className="text-xl font-serif text-ink mb-3">暂无历史记录</h3>
+        <p className="text-ink-muted max-w-md leading-relaxed">
+          您还没有完成过任何隐私政策审查。所有的历史审查报告和分析结果都将保存在这里。
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto h-full flex flex-col">
       <div className="flex justify-between items-end shrink-0">

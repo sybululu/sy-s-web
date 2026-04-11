@@ -1,14 +1,34 @@
-import { Upload, TrendingUp, ShieldAlert, CheckCircle2, AlertCircle, FileText, Activity, BarChart3 } from 'lucide-react';
+import { Upload, TrendingUp, ShieldAlert, CheckCircle2, AlertCircle, FileText, Activity, BarChart3, ArrowRight } from 'lucide-react';
 import { Project, ViewType } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface OverviewProps {
-  currentProject: Project;
+  currentProject: Project | null;
   projects: Project[];
   onViewChange: (view: ViewType) => void;
 }
 
 export default function Overview({ currentProject, projects, onViewChange }: OverviewProps) {
+  if (!currentProject) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center">
+        <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 border border-slate-100 shadow-sm">
+          <FileText className="w-10 h-10 text-slate-300" />
+        </div>
+        <h3 className="text-xl font-serif text-ink mb-3">暂无审查数据</h3>
+        <p className="text-ink-muted mb-8 max-w-md leading-relaxed">
+          您还没有进行过任何隐私政策审查。点击下方按钮新建一个审查任务，体验基于 RoBERTa 与 mT5 的智能合规检测。
+        </p>
+        <button 
+          onClick={() => onViewChange('new-task')} 
+          className="bg-ink text-white px-8 py-3 rounded-xl hover:bg-ink/90 transition-all shadow-sm font-medium flex items-center gap-2"
+        >
+          开始第一次审查 <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
   const isHighRisk = currentProject.score < 60;
 
   // Calculate dynamic stats for current project

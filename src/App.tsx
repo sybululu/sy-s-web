@@ -210,15 +210,15 @@ export default function App() {
         />
         
         <div className="flex-1 overflow-y-auto p-8">
-          {currentView === 'overview' && currentProject && (
-            <Overview currentProject={displayProject as Project} projects={projects} onViewChange={handleViewChange} />
+          {currentView === 'overview' && (
+            <Overview currentProject={displayProject} projects={projects} onViewChange={handleViewChange} />
           )}
           {currentView === 'new-task' && (
             <NewTask onStartAnalysis={handleStartAnalysis} />
           )}
-          {currentView === 'details' && currentProject && (
+          {currentView === 'details' && (
             <Details 
-              currentProject={displayProject as Project} 
+              currentProject={displayProject} 
               onOpenDrawer={handleOpenDrawer} 
               onDownload={handleDownload} 
             />
