@@ -114,10 +114,11 @@ export default function PolicyModal({ isOpen, title, content, onClose, onAccept 
                 </button>
                 <button 
                   onClick={onAccept} 
+                  disabled={!isScrolledToBottom}
                   className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-2 ${
                     isScrolledToBottom 
                       ? 'bg-ink text-white hover:bg-ink/90 hover:shadow-md active:scale-95' 
-                      : 'bg-ink/80 text-white/90 hover:bg-ink'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   }`}
                 >
                   我已阅读并同意

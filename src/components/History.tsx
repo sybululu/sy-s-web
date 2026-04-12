@@ -1,11 +1,27 @@
 import { FileText, CheckCircle2, AlertCircle, Filter, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Project } from '../types';
 import { useState } from 'react';
+import { motion } from 'motion/react';
 
 interface HistoryProps {
   projects: Project[];
   onSelectProject: (project: Project) => void;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0 }
+};
 
 export default function History({ projects, onSelectProject }: HistoryProps) {
   const [riskFilter, setRiskFilter] = useState<string>('all');
@@ -28,7 +44,12 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
 
   if (projects.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center"
+      >
         <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 border border-slate-100 shadow-sm">
           <FileText className="w-10 h-10 text-slate-300" />
         </div>
@@ -36,20 +57,25 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
         <p className="text-ink-muted max-w-md leading-relaxed">
           您还没有完成过任何隐私政策审查。所有的历史审查报告和分析结果都将保存在这里。
         </p>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto h-full flex flex-col">
-      <div className="flex justify-between items-end shrink-0">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 max-w-6xl mx-auto h-full flex flex-col"
+    >
+      <motion.div variants={itemVariants} className="flex justify-between items-end shrink-0">
         <div>
           <h2 className="text-3xl font-serif text-ink tracking-tight mb-1">历史审查报告</h2>
           <p className="text-ink-muted text-sm">所有已完成的隐私政策审计档案</p>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="glass-card p-4 rounded-xl flex flex-wrap gap-4 items-center justify-between shrink-0">
+      <motion.div variants={itemVariants} className="glass-card p-4 rounded-xl flex flex-wrap gap-4 items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-ink-muted" />
@@ -85,9 +111,9 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
         <div className="text-sm text-ink-muted">
           共找到 <span className="font-semibold text-ink">{filteredProjects.length}</span> 份报告
         </div>
-      </div>
+      </motion.div>
 
-      <div className="glass-card rounded-xl flex-1 flex flex-col min-h-0">
+      <motion.div variants={itemVariants} className="glass-card rounded-xl flex-1 flex flex-col min-h-0">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -101,12 +127,15 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
             </thead>
             <tbody className="divide-y divide-white/20">
               {currentData.length > 0 ? (
-                currentData.map((project) => {
+                currentData.map((project, index) => {
                   const isHighRisk = project.riskStatus === '极高风险';
                   const isLowRisk = project.riskStatus === '低风险';
                   
                   return (
-                    <tr 
+                    <motion.tr 
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
                       key={project.id} 
                       onClick={() => onSelectProject(project)}
                       className="hover:bg-white/50 transition-colors cursor-pointer group"
@@ -142,7 +171,7 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
                           查看 &rarr;
                         </span>
                       </td>
-                    </tr>
+                    </motion.tr>
                   );
                 })
               ) : (
@@ -181,7 +210,7 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -1,4 +1,5 @@
 import { Search, Bell, HelpCircle } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface HeaderProps {
   title: string;
@@ -9,9 +10,21 @@ interface HeaderProps {
 
 export default function Header({ title, searchQuery, onSearchChange, onShowToast }: HeaderProps) {
   return (
-    <header className="flex justify-between items-center h-14 px-8 sticky top-0 z-50 w-full glass-panel border-b border-white/50">
+    <motion.header 
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex justify-between items-center h-14 px-8 sticky top-0 z-50 w-full glass-panel border-b border-white/50"
+    >
       <div className="flex items-center gap-4">
-        <span className="font-serif text-xl text-ink tracking-tight">{title}</span>
+        <motion.span 
+          key={title}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="font-serif text-xl text-ink tracking-tight"
+        >
+          {title}
+        </motion.span>
       </div>
       <div className="flex items-center gap-6">
         <div className="relative group">
@@ -27,18 +40,18 @@ export default function Header({ title, searchQuery, onSearchChange, onShowToast
         <div className="flex items-center gap-4">
           <button 
             onClick={() => onShowToast?.('暂无新通知')}
-            className="text-ink-muted hover:text-ink transition-colors"
+            className="text-ink-muted hover:text-ink transition-colors hover:scale-110 active:scale-95"
           >
             <Bell className="w-4 h-4" />
           </button>
           <button 
             onClick={() => onShowToast?.('帮助文档正在建设中')}
-            className="text-ink-muted hover:text-ink transition-colors"
+            className="text-ink-muted hover:text-ink transition-colors hover:scale-110 active:scale-95"
           >
             <HelpCircle className="w-4 h-4" />
           </button>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

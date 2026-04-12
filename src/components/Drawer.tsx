@@ -15,14 +15,45 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
   const [editedText, setEditedText] = useState('');
   const [copied, setCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [localDiffHtml, setLocalDiffHtml] = useState('');
+  const [localLegalBasis, setLocalLegalBasis] = useState('');
 
   useEffect(() => {
     if (clause) {
       setEditedText(clause.suggestedText);
+      setLocalDiffHtml(clause.diffSuggestedHtml);
+      setLocalLegalBasis(clause.legalBasis);
       setFeedback(null);
       setCopied(false);
+      
+      // 如果建议文本是默认的，调用后端生成真实的建议
+      if (clause.suggestedText === '【系统建议】请根据合规要求修改。' || !clause.suggestedText) {
+        generateSuggestion(clause);
+      }
     }
   }, [clause]);
+
+  const generateSuggestion = async (currentClause: Clause) => {
+    setIsGenerating(true);
+    try {
+      const { api } = await import('../utils/api');
+      const res = await api.rectify(currentClause.originalText, currentClause.category);
+      setEditedText(res.suggested_text);
+      setLocalDiffHtml(`<span class="diff-add">${res.suggested_text}</span>`);
+      setLocalLegalBasis(res.legal_basis);
+      
+      // 更新 clause 对象，避免重复生成
+      currentClause.suggestedText = res.suggested_text;
+      currentClause.legalBasis = res.legal_basis;
+      currentClause.diffSuggestedHtml = `<span class="diff-add">${res.suggested_text}</span>`;
+    } catch (error) {
+      console.error('Failed to generate suggestion:', error);
+      onShowToast?.('生成整改建议失败', 'error');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleFeedback = (type: 'up' | 'down') => {
     setFeedback(type);
@@ -74,12 +105,12 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
             <div className="flex-1 overflow-y-auto p-8 space-y-8">
               {clause && (
                 <>
-                  <div>
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                     <div className="text-xs font-medium text-ink-muted mb-2 uppercase tracking-widest">风险类别</div>
                     <div className="text-lg font-serif text-ink">{clause.reason}</div>
-                  </div>
+                  </motion.div>
 
-                  <div className="space-y-3">
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm font-medium text-ink">
                         <Sparkles className="w-4 h-4 text-[#d97757]" />
@@ -124,14 +155,14 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                         <div className="flex flex-1">
                           <div 
                             className="p-4 bg-green-50/40 text-slate-900 leading-relaxed flex-1" 
-                            dangerouslySetInnerHTML={{ __html: clause.diffSuggestedHtml }} 
+                            dangerouslySetInnerHTML={{ __html: localDiffHtml }} 
                           />
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="space-y-3">
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm font-medium text-ink">
                         <Edit3 className="w-4 h-4 text-ink-muted" />
@@ -146,31 +177,38 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                       </button>
                     </div>
                     <div className="glass-input rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-ink focus-within:border-ink transition-all">
-                      <textarea
-                        value={editedText}
-                        onChange={(e) => setEditedText(e.target.value)}
-                        className="w-full p-4 min-h-[120px] text-sm text-ink leading-relaxed resize-y outline-none bg-transparent"
-                        placeholder="在此处对模型建议进行最终微调..."
-                      />
+                      {isGenerating ? (
+                        <div className="flex items-center justify-center py-12 text-ink-muted text-sm">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-ink mr-3"></div>
+                          正在调用 mT5 模型生成整改建议...
+                        </div>
+                      ) : (
+                        <textarea
+                          value={editedText}
+                          onChange={(e) => setEditedText(e.target.value)}
+                          className="w-full p-4 min-h-[120px] text-sm text-ink leading-relaxed resize-y outline-none bg-transparent"
+                          placeholder="在此处对模型建议进行最终微调..."
+                        />
+                      )}
                       <div className="bg-white/30 px-4 py-2 border-t border-white/20 flex justify-end">
                         <span className="text-xs text-ink-muted">
                           {editedText.length} 字
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="space-y-3">
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="space-y-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-ink">
                       <BookOpen className="w-4 h-4 text-ink-muted" />
                       合规依据
                     </div>
                     <div className="glass-card p-5 rounded-lg">
                       <p className="text-sm text-ink-muted leading-relaxed font-serif">
-                        {clause.legalBasis}
+                        {localLegalBasis}
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
                 </>
               )}
             </div>

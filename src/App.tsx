@@ -5,7 +5,6 @@
 
 import { useState, useEffect } from 'react';
 import { ViewType, Project, Clause, ToastState } from './types';
-import { MOCK_PROJECTS } from './constants';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Overview from './components/Overview';
@@ -16,6 +15,8 @@ import Drawer from './components/Drawer';
 import Toast from './components/Toast';
 import Login from './components/Login';
 import Register from './components/Register';
+import { api } from './utils/api';
+import { AnimatePresence, motion } from 'motion/react';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -29,37 +30,43 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    // 检查本地是否已有 token
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setCurrentUser(user);
+        setIsLoggedIn(true);
+      } catch (e) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (isLoggedIn) {
-      // @ts-ignore
-      let API_BASE = import.meta.env?.VITE_API_URL || '';
-      
-      // 自动修正 Hugging Face 网页地址为直连 API 地址
-      if (API_BASE.includes('huggingface.co/spaces/')) {
-        const parts = API_BASE.split('huggingface.co/spaces/');
-        if (parts.length > 1) {
-          const path = parts[1].split('/');
-          if (path.length >= 2) {
-            const username = path[0];
-            const spacename = path[1];
-            API_BASE = `https://${username}-${spacename}.hf.space`;
-            console.log('Auto-corrected HF URL to:', API_BASE);
-          }
-        }
-      }
-
-      fetch(`${API_BASE}/api/v1/projects`)
-        .then(res => {
-          if (!res.ok) throw new Error('Network response was not ok');
-          return res.json();
-        })
+      api.getProjects()
         .then(data => {
-          // 确保 data 是数组，防止后端报错返回对象导致前端崩溃白屏
           if (Array.isArray(data)) {
-            setProjects(data);
-            if (data.length > 0) {
-              setCurrentProject(data[0]);
+            // Map backend project format to frontend Project format
+            const mappedProjects: Project[] = data.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              date: p.created_at.split('T')[0],
+              description: `审查得分: ${p.score}，风险等级: ${p.risk_level}`,
+              score: p.score,
+              riskStatus: p.risk_level,
+              clauses: [] // 列表接口可能不返回 clauses，需要点进去再拉取，或者后端直接返回
+            }));
+            setProjects(mappedProjects);
+            if (mappedProjects.length > 0) {
+              // 默认选中第一个，但可能需要拉取详情
+              handleSelectProject(mappedProjects[0]);
             }
           } else {
             console.error('Expected array from API, got:', data);
@@ -69,7 +76,9 @@ export default function App() {
         .catch(err => {
           console.error('Failed to fetch projects:', err);
           setProjects([]);
-          showToast('无法连接到后端服务，请检查 API 地址配置', 'error');
+          if (err.message !== '登录已过期') {
+            showToast('无法连接到后端服务，请检查 API 地址配置', 'error');
+          }
         });
     }
   }, [isLoggedIn]);
@@ -81,12 +90,16 @@ export default function App() {
     }, 3000);
   };
 
-  const handleLogin = () => {
+  const handleLogin = (token: string, user: any) => {
+    setCurrentUser(user);
     setIsLoggedIn(true);
     setCurrentView('overview');
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setCurrentUser(null);
     setIsLoggedIn(false);
     setCurrentView('overview');
   };
@@ -95,8 +108,31 @@ export default function App() {
     setCurrentView(view);
   };
 
-  const handleSelectProject = (project: Project) => {
-    setCurrentProject(project);
+  const handleSelectProject = async (project: Project) => {
+    try {
+      // 尝试获取项目详情（包含 clauses）
+      const detail = await api.getProject(project.id);
+      const fullProject: Project = {
+        ...project,
+        clauses: detail.violations.map((v: any, index: number) => ({
+          id: `CL-${Math.floor(Math.random() * 9000) + 1000}`,
+          location: v.location || `第${index + 1}节`,
+          category: v.category || v.indicator || '未知类别',
+          snippet: v.snippet || v.originalText || '',
+          riskLevel: detail.risk_level === '高风险' ? 'high' : 'medium',
+          reason: v.reason || v.indicator || '',
+          originalText: v.originalText || v.snippet || '',
+          suggestedText: v.suggestedText || '【系统建议】请根据合规要求修改。',
+          diffOriginalHtml: v.diffOriginalHtml || v.snippet || '',
+          diffSuggestedHtml: v.diffSuggestedHtml || `<span class="diff-add">${v.suggestedText || '建议修改'}</span>`,
+          legalBasis: v.legalBasis || v.legal_basis || ''
+        }))
+      };
+      setCurrentProject(fullProject);
+    } catch (err) {
+      console.error('Failed to fetch project details:', err);
+      setCurrentProject(project); // fallback
+    }
     setCurrentView('details');
   };
 
@@ -112,17 +148,15 @@ export default function App() {
 
   const handleDownload = () => {
     if (!currentProject) return;
-    const content = `合规报告摘要：项目[${currentProject.name}]，得分${currentProject.score}\n--------------------------------------------------\n生成时间: ${new Date().toLocaleString()}\n风险状态: ${currentProject.riskStatus}\n\n违规统计:\n- 待修复项: ${currentProject.clauses.length}项\n\n本报告由智审合规 NLP 引擎自动生成。`;
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentProject.name}_合规审计报告.txt`;
-    a.click();
-    showToast('合规报告导出成功');
+    try {
+      api.exportReport(currentProject.id);
+      showToast('合规报告导出成功');
+    } catch (err) {
+      showToast('导出失败', 'error');
+    }
   };
 
-  const handleStartAnalysis = async (type: string, value: string) => {
+  const handleStartAnalysis = async (type: string, value: any) => {
     if (!value) {
       showToast('请输入有效内容', 'error');
       return;
@@ -131,56 +165,42 @@ export default function App() {
     setIsAnalyzing(true);
     setAnalysisStep('正在提取文本内容...');
     
-    setTimeout(() => setAnalysisStep('正在调用 RAG-mT5 引擎进行合规性比对...'), 1500);
-    setTimeout(() => setAnalysisStep('正在生成审查报告与整改建议...'), 3000);
-    
     try {
-      // @ts-ignore
-      let API_BASE = import.meta.env?.VITE_API_URL || '';
+      let textToAnalyze = value;
       
-      // 自动修正 Hugging Face 网页地址为直连 API 地址
-      if (API_BASE.includes('huggingface.co/spaces/')) {
-        const parts = API_BASE.split('huggingface.co/spaces/');
-        if (parts.length > 1) {
-          const path = parts[1].split('/');
-          if (path.length >= 2) {
-            const username = path[0];
-            const spacename = path[1];
-            API_BASE = `https://${username}-${spacename}.hf.space`;
-          }
-        }
+      if (type === 'file') {
+        const uploadRes = await api.uploadFile(value as File);
+        textToAnalyze = uploadRes.text;
+      } else if (type === 'url') {
+        const urlRes = await api.fetchUrl(value as string);
+        textToAnalyze = urlRes.text;
       }
-
-      const response = await fetch(`${API_BASE}/api/v1/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: value }) // Changed 'value' to 'text' to match Python backend schema
-      });
       
-      if (!response.ok) throw new Error('Analysis failed');
+      setAnalysisStep('正在调用 RAG-mT5 引擎进行合规性比对...');
+      const result = await api.analyze(textToAnalyze, type);
       
-      const result = await response.json();
+      setAnalysisStep('正在生成审查报告与整改建议...');
       
       // Map Python backend response to frontend Project structure
       const newProject: Project = {
-        id: Math.random().toString(36).substring(2, 9),
-        name: type === 'url' ? `URL 抓取: ${value}` : type === 'file' ? `上传文件: ${value}` : '自定义文本分析',
+        id: result.id,
+        name: result.name,
         date: new Date().toISOString().split('T')[0],
         description: `基于大语言模型风险识别与整改建议生成的自动化审查报告。共发现 ${result.violations.length} 项潜在风险。`,
-        score: result.total_score,
+        score: result.score,
         riskStatus: result.risk_level,
         clauses: result.violations.map((v: any, index: number) => ({
           id: `CL-${Math.floor(Math.random() * 9000) + 1000}`,
-          location: `第${index + 1}节`,
-          category: v.indicator,
-          snippet: v.snippet,
+          location: v.location || `第${index + 1}节`,
+          category: v.category || v.indicator || '未知类别',
+          snippet: v.snippet || v.originalText || '',
           riskLevel: result.risk_level === '高风险' ? 'high' : 'medium',
-          reason: v.indicator,
-          originalText: v.snippet,
-          suggestedText: '【系统建议】为了符合合规要求，建议将原表述修改为：在您使用本服务时，我们将出于提供核心业务功能的目的，在获得您单独同意后，收集必要的个人信息。',
-          diffOriginalHtml: v.snippet,
-          diffSuggestedHtml: '<span class="diff-add">【系统建议】为了符合合规要求，建议将原表述修改为：在您使用本服务时，我们将出于提供核心业务功能的目的，在获得您单独同意后，收集必要的个人信息。</span>',
-          legalBasis: v.legal_basis
+          reason: v.reason || v.indicator || '',
+          originalText: v.originalText || v.snippet || '',
+          suggestedText: v.suggestedText || '【系统建议】请根据合规要求修改。',
+          diffOriginalHtml: v.diffOriginalHtml || v.snippet || '',
+          diffSuggestedHtml: v.diffSuggestedHtml || `<span class="diff-add">${v.suggestedText || '建议修改'}</span>`,
+          legalBasis: v.legalBasis || v.legal_basis || ''
         }))
       };
       
@@ -189,30 +209,32 @@ export default function App() {
       setCurrentView('details');
       setSearchQuery('');
       showToast('审计完成，已生成合规报告');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      showToast('分析失败，请重试', 'error');
+      showToast(error.message || '分析失败，请重试', 'error');
     } finally {
       setIsAnalyzing(false);
     }
   };
 
   if (!isLoggedIn) {
-    if (isRegistering) {
-      return (
-        <Register 
-          onRegister={() => { showToast('注册成功！'); setIsRegistering(false); }} 
-          onSwitchToLogin={() => setIsRegistering(false)} 
-          onShowToast={showToast}
-        />
-      );
-    }
     return (
-      <Login 
-        onLogin={handleLogin} 
-        onSwitchToRegister={() => setIsRegistering(true)}
-        onShowToast={showToast}
-      />
+      <>
+        {isRegistering ? (
+          <Register 
+            onRegister={(token, user) => { handleLogin(token, user); setIsRegistering(false); }} 
+            onSwitchToLogin={() => setIsRegistering(false)} 
+            onShowToast={showToast}
+          />
+        ) : (
+          <Login 
+            onLogin={handleLogin} 
+            onSwitchToRegister={() => setIsRegistering(true)}
+            onShowToast={showToast}
+          />
+        )}
+        <Toast toast={toast} />
+      </>
     );
   }
 
@@ -253,22 +275,33 @@ export default function App() {
         />
         
         <div className="flex-1 overflow-y-auto p-8">
-          {currentView === 'overview' && (
-            <Overview currentProject={displayProject} projects={projects} onViewChange={handleViewChange} />
-          )}
-          {currentView === 'new-task' && (
-            <NewTask onStartAnalysis={handleStartAnalysis} />
-          )}
-          {currentView === 'details' && (
-            <Details 
-              currentProject={displayProject} 
-              onOpenDrawer={handleOpenDrawer} 
-              onDownload={handleDownload} 
-            />
-          )}
-          {currentView === 'history' && (
-            <History projects={filteredProjects} onSelectProject={handleSelectProject} />
-          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentView}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="h-full"
+            >
+              {currentView === 'overview' && (
+                <Overview currentProject={displayProject} projects={projects} onViewChange={handleViewChange} />
+              )}
+              {currentView === 'new-task' && (
+                <NewTask onStartAnalysis={handleStartAnalysis} />
+              )}
+              {currentView === 'details' && (
+                <Details 
+                  currentProject={displayProject} 
+                  onOpenDrawer={handleOpenDrawer} 
+                  onDownload={handleDownload} 
+                />
+              )}
+              {currentView === 'history' && (
+                <History projects={filteredProjects} onSelectProject={handleSelectProject} />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
 

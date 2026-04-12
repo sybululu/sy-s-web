@@ -1,6 +1,7 @@
 import { FileText, Filter, Download, ArrowRight, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { Project, Clause } from '../types';
 import { useState } from 'react';
+import { motion } from 'motion/react';
 
 interface DetailsProps {
   currentProject: Project | null;
@@ -8,13 +9,33 @@ interface DetailsProps {
   onDownload: () => void;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0 }
+};
+
 export default function Details({ currentProject, onOpenDrawer, onDownload }: DetailsProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 8;
 
   if (!currentProject) {
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center"
+      >
         <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 border border-slate-100 shadow-sm">
           <ShieldAlert className="w-10 h-10 text-slate-300" />
         </div>
@@ -22,7 +43,7 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
         <p className="text-ink-muted max-w-md leading-relaxed">
           请先在“新建审查任务”中提交隐私政策文本，系统分析完成后将在此处展示详细的违规条款与整改建议。
         </p>
-      </div>
+      </motion.div>
     );
   }
 
@@ -30,8 +51,13 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
   const currentData = currentProject.clauses.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto h-full flex flex-col">
-      <div className="flex justify-between items-end shrink-0">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 max-w-6xl mx-auto h-full flex flex-col"
+    >
+      <motion.div variants={itemVariants} className="flex justify-between items-end shrink-0">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h2 className="text-3xl font-serif text-ink tracking-tight">
@@ -57,9 +83,9 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
             <Download className="w-4 h-4" /> 导出报告
           </button>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="glass-card rounded-xl flex-1 flex flex-col min-h-0">
+      <motion.div variants={itemVariants} className="glass-card rounded-xl flex-1 flex flex-col min-h-0">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -74,8 +100,14 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
             </thead>
             <tbody className="divide-y divide-white/20">
               {currentData.length > 0 ? (
-                currentData.map((clause) => (
-                  <tr key={clause.id} className="hover:bg-white/50 transition-colors group">
+                currentData.map((clause, index) => (
+                  <motion.tr 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    key={clause.id} 
+                    className="hover:bg-white/50 transition-colors group"
+                  >
                     <td className="px-4 py-3 text-xs font-mono text-ink-muted">{clause.id}</td>
                     <td className="px-4 py-3 text-xs text-ink-muted">{clause.location}</td>
                     <td className="px-4 py-3 text-sm text-ink font-medium">{clause.category}</td>
@@ -99,7 +131,7 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
                         审查 <ArrowRight className="w-3 h-3" />
                       </button>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))
               ) : (
                 <tr>
@@ -137,7 +169,7 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

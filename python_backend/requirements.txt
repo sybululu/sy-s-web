@@ -1,15 +1,15 @@
 fastapi==0.104.1
 uvicorn==0.24.0
 pydantic==2.5.2
-
-# --- 如果你要接入真实模型，请取消下面这些库的注释 ---
-# torch>=2.0.0
-# transformers>=4.35.0
-# sentence-transformers>=2.2.2
-# faiss-cpu>=1.7.4
-# numpy>=1.24.0
-# 深度学习相关库（取消注释以在真实环境中使用）
-# torch==2.1.0
-# transformers==4.35.0
-# sentence-transformers==2.2.2
-# pymilvus==2.3.3
+sqlalchemy==2.0.23
+passlib==1.7.4
+bcrypt==4.1.2
+python-jose==3.3.0
+python-multipart==0.0.6
+torch>=2.0.0
+transformers>=4.35.0
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.4
+numpy>=1.24.0
+requests==2.31.0
+beautifulsoup4==4.12.2

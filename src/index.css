@@ -32,6 +32,17 @@
   }
 }
 
+/* Hide default browser password reveal icon */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+}
+
 .diff-remove {
   @apply bg-red-100 text-red-900 px-1 rounded-sm border border-red-200 line-through decoration-red-500/50;
 }

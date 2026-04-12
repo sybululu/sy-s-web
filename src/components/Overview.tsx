@@ -1,6 +1,7 @@
 import { Upload, TrendingUp, ShieldAlert, CheckCircle2, AlertCircle, FileText, Activity, BarChart3, ArrowRight } from 'lucide-react';
 import { Project, ViewType } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { motion } from 'motion/react';
 
 interface OverviewProps {
   currentProject: Project | null;
@@ -8,10 +9,30 @@ interface OverviewProps {
   onViewChange: (view: ViewType) => void;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
+
 export default function Overview({ currentProject, projects, onViewChange }: OverviewProps) {
   if (!currentProject) {
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center"
+      >
         <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 border border-slate-100 shadow-sm">
           <FileText className="w-10 h-10 text-slate-300" />
         </div>
@@ -25,7 +46,7 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
         >
           开始第一次审查 <ArrowRight className="w-4 h-4" />
         </button>
-      </div>
+      </motion.div>
     );
   }
 
@@ -61,8 +82,13 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
   }));
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-8">
-      <div className="flex justify-between items-end">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 max-w-7xl mx-auto pb-8"
+    >
+      <motion.div variants={itemVariants} className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-serif text-ink tracking-tight mb-1">审计总览</h2>
           <p className="text-ink-muted text-sm">实时合规健康度与风险态势感知</p>
@@ -74,22 +100,24 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
           <Upload className="w-4 h-4" />
           开始新审计
         </button>
-      </div>
+      </motion.div>
 
       {/* Top Row: Main Score & Risk Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 glass-card p-8 rounded-xl flex items-center gap-10">
+        <motion.div variants={itemVariants} className="lg:col-span-2 glass-card p-8 rounded-xl flex items-center gap-10">
           <div className="relative shrink-0">
             <svg className="w-32 h-32 transform -rotate-90">
               <circle className="text-slate-100" cx="64" cy="64" fill="transparent" r="56" stroke="currentColor" strokeWidth="8"></circle>
-              <circle
+              <motion.circle
+                initial={{ strokeDashoffset: 351.86 }}
+                animate={{ strokeDashoffset: 351.86 * (1 - currentProject.score / 100) }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
                 className={isHighRisk ? 'text-[#d97757]' : 'text-ink'}
                 cx="64" cy="64" fill="transparent" r="56" stroke="currentColor"
                 strokeDasharray="351.86"
-                strokeDashoffset={351.86 * (1 - currentProject.score / 100)}
                 strokeWidth="8"
                 strokeLinecap="round"
-              ></circle>
+              ></motion.circle>
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-serif text-ink tracking-tight">{currentProject.score}</span>
@@ -125,9 +153,9 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="glass-card p-6 rounded-xl flex flex-col justify-between">
+        <motion.div variants={itemVariants} className="glass-card p-6 rounded-xl flex flex-col justify-between">
           <div>
             <div className="text-xs font-medium uppercase tracking-widest text-ink-muted mb-5 flex items-center gap-2">
               <Activity className="w-4 h-4" />
@@ -161,16 +189,16 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
             <div className="w-full bg-slate-100 rounded-full h-1.5 flex overflow-hidden">
               {currentProject.clauses.length > 0 ? (
                 <>
-                  <div style={{ width: `${(highCount / currentProject.clauses.length) * 100}%` }} className="bg-[#d97757] h-full"></div>
-                  <div style={{ width: `${(mediumCount / currentProject.clauses.length) * 100}%` }} className="bg-amber-500 h-full"></div>
-                  <div style={{ width: `${(lowCount / currentProject.clauses.length) * 100}%` }} className="bg-slate-300 h-full"></div>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${(highCount / currentProject.clauses.length) * 100}%` }} transition={{ duration: 1 }} className="bg-[#d97757] h-full"></motion.div>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${(mediumCount / currentProject.clauses.length) * 100}%` }} transition={{ duration: 1, delay: 0.2 }} className="bg-amber-500 h-full"></motion.div>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${(lowCount / currentProject.clauses.length) * 100}%` }} transition={{ duration: 1, delay: 0.4 }} className="bg-slate-300 h-full"></motion.div>
                 </>
               ) : (
                 <div className="w-full bg-green-500 h-full"></div>
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Middle Row: Dynamic Stats */}
@@ -181,20 +209,20 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
           { label: '历史审查总数', value: totalAudits, unit: '次', trend: '', trendColor: '' },
           { label: '当前高危风险', value: highCount, unit: '项', trend: highCount > 0 ? 'up' : '', trendColor: highCount > 0 ? 'text-[#d97757]' : '' },
         ].map((stat, i) => (
-          <div key={i} className="glass-card p-6 rounded-xl">
+          <motion.div variants={itemVariants} key={i} className="glass-card p-6 rounded-xl">
             <div className="text-xs font-medium text-ink-muted mb-2 uppercase tracking-widest">{stat.label}</div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-3xl font-serif text-ink tracking-tight">{stat.value}</span>
               <span className="text-xs font-medium text-ink-muted">{stat.unit}</span>
               {stat.trend === 'up' && <TrendingUp className={`w-4 h-4 ml-auto ${stat.trendColor}`} />}
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
       {/* Bottom Row: Trend Chart & Top Categories */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 glass-card rounded-xl overflow-hidden flex flex-col">
+        <motion.div variants={itemVariants} className="lg:col-span-2 glass-card rounded-xl overflow-hidden flex flex-col">
           <div className="px-6 py-5 border-b border-white/30 bg-white/40">
             <h3 className="text-sm font-medium text-ink flex items-center gap-2 uppercase tracking-widest">
               <TrendingUp className="w-4 h-4 text-ink-muted" /> 合规得分趋势 (近 10 次)
@@ -220,9 +248,9 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
 
-        <div className="glass-card rounded-xl overflow-hidden flex flex-col">
+        <motion.div variants={itemVariants} className="glass-card rounded-xl overflow-hidden flex flex-col">
           <div className="px-6 py-5 border-b border-white/30 bg-white/40">
             <h3 className="text-sm font-medium text-ink flex items-center gap-2 uppercase tracking-widest">
               <BarChart3 className="w-4 h-4 text-ink-muted" /> 频发违规类型 (当前)
@@ -238,10 +266,12 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
                       <span className="text-ink-muted font-mono">{count} 项</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-1.5">
-                      <div 
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(count / currentProject.clauses.length) * 100}%` }}
+                        transition={{ duration: 1, delay: idx * 0.1 }}
                         className="bg-ink h-1.5 rounded-full" 
-                        style={{ width: `${(count / currentProject.clauses.length) * 100}%` }}
-                      ></div>
+                      ></motion.div>
                     </div>
                   </div>
                 ))}
@@ -253,8 +283,8 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }

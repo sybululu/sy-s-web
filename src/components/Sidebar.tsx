@@ -1,5 +1,6 @@
 import { ShieldCheck, LayoutDashboard, PlusSquare, Gavel, History, LogOut } from 'lucide-react';
 import { ViewType } from '../types';
+import { motion } from 'motion/react';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -16,7 +17,12 @@ export default function Sidebar({ currentView, onViewChange, onLogout }: Sidebar
   ];
 
   return (
-    <aside className="w-64 glass-panel flex flex-col h-screen py-6 px-4 shrink-0 border-r border-white/50 z-10">
+    <motion.aside 
+      initial={{ x: -250 }}
+      animate={{ x: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="w-64 glass-panel flex flex-col h-screen py-6 px-4 shrink-0 border-r border-white/50 z-10"
+    >
       <div className="px-4 mb-8">
         <div className="flex items-center gap-2 mb-1">
           <div className="w-8 h-8 rounded-md bg-ink flex items-center justify-center text-white shadow-sm">
@@ -35,12 +41,18 @@ export default function Sidebar({ currentView, onViewChange, onLogout }: Sidebar
             <button
               key={item.id}
               onClick={() => onViewChange(item.id as ViewType)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm relative ${
                 isActive
                   ? 'bg-white/60 text-ink font-medium shadow-sm border border-white/60'
                   : 'text-ink-muted hover:bg-white/40 hover:text-ink border border-transparent'
               }`}
             >
+              {isActive && (
+                <motion.div 
+                  layoutId="active-nav-indicator"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-ink rounded-r-full" 
+                />
+              )}
               <Icon className={`w-4 h-4 ${isActive ? 'text-ink' : 'text-ink-muted'}`} />
               <span>{item.label}</span>
             </button>
@@ -54,7 +66,7 @@ export default function Sidebar({ currentView, onViewChange, onLogout }: Sidebar
             WZ
           </div>
           <div>
-            <div className="text-sm font-medium text-ink">王志远</div>
+            <div className="text-sm font-medium text-ink">企业管理员</div>
             <div className="text-[10px] text-ink-muted">高级合规审计师</div>
           </div>
         </div>
@@ -66,6 +78,6 @@ export default function Sidebar({ currentView, onViewChange, onLogout }: Sidebar
           <span>退出登录</span>
         </button>
       </div>
-    </aside>
+    </motion.aside>
   );
 }

@@ -1,5 +1,6 @@
 import { Upload, Globe, FileText, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
+import { motion } from 'motion/react';
 
 interface NewTaskProps {
   onStartAnalysis: (type: string, value: string) => void;
@@ -9,7 +10,12 @@ export default function NewTask({ onStartAnalysis }: NewTaskProps) {
   const [textInput, setTextInput] = useState('');
 
   return (
-    <div className="h-full flex flex-col max-w-7xl mx-auto w-full">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="h-full flex flex-col max-w-7xl mx-auto w-full"
+    >
       <div className="mb-6 shrink-0">
         <h2 className="text-3xl font-serif text-ink tracking-tight mb-2">新建审查任务</h2>
         <p className="text-ink-muted text-sm">支持多格式文本、PDF 及 URL 实时抓取审计</p>
@@ -17,30 +23,48 @@ export default function NewTask({ onStartAnalysis }: NewTaskProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 flex-1 min-h-0">
         {/* Left: File Upload */}
-        <div 
-          onClick={() => onStartAnalysis('file', 'Privacy_Policy_V3.docx')}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
           className="lg:col-span-3 border-2 border-dashed border-white/60 rounded-2xl p-8 flex flex-col items-center justify-center glass-card hover:border-[#d97757] hover:bg-white/70 transition-all cursor-pointer group relative overflow-hidden h-full"
         >
+          <input 
+            type="file" 
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                onStartAnalysis('file', file as any);
+              }
+            }}
+            accept=".txt,.md,.json,.csv"
+          />
           <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] opacity-30"></div>
           
-          <div className="relative z-10 flex flex-col items-center text-center">
+          <div className="relative z-10 flex flex-col items-center text-center pointer-events-none">
             <div className="w-16 h-16 rounded-full bg-white/80 shadow-sm border border-white/60 flex items-center justify-center text-ink mb-6 group-hover:scale-110 transition-transform duration-300">
               <Upload className="w-6 h-6" />
             </div>
             <h4 className="text-2xl font-serif text-ink mb-3">点击或拖拽文件至此处</h4>
             <p className="text-sm text-ink-muted mb-8 max-w-md leading-relaxed">
-              支持 PDF, DOCX, TXT 格式，单文件最大 20MB。<br/>
+              支持 TXT, MD, JSON 格式，单文件最大 20MB。<br/>
               系统将自动解析文本内容并进行向量化处理，调用 RAG-mT5 引擎进行深度合规审查。
             </p>
-            <button className="bg-white/80 border border-white/60 px-6 py-2.5 rounded-lg text-sm font-medium text-ink transition-colors hover:bg-white shadow-sm flex items-center gap-2">
+            <button className="bg-white/80 border border-white/60 px-6 py-2.5 rounded-lg text-sm font-medium text-ink transition-colors hover:bg-white shadow-sm flex items-center gap-2 pointer-events-auto">
               浏览本地文件 <ArrowRight className="w-4 h-4 text-ink-muted" />
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Right: URL & Text Input */}
         <div className="lg:col-span-2 flex flex-col gap-6 h-full min-h-0">
-          <div className="glass-card p-6 rounded-2xl relative overflow-hidden shrink-0">
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="glass-card p-6 rounded-2xl relative overflow-hidden shrink-0"
+          >
             <div className="absolute top-0 left-0 w-1 h-full bg-ink"></div>
             <div className="text-sm font-medium text-ink mb-4 flex items-center gap-2 uppercase tracking-widest">
               <Globe className="w-4 h-4 text-ink-muted" /> 输入 URL 地址
@@ -57,9 +81,14 @@ export default function NewTask({ onStartAnalysis }: NewTaskProps) {
             >
               抓取并分析
             </button>
-          </div>
+          </motion.div>
 
-          <div className="glass-card p-6 rounded-2xl flex-1 flex flex-col relative overflow-hidden min-h-0">
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="glass-card p-6 rounded-2xl flex-1 flex flex-col relative overflow-hidden min-h-0"
+          >
             <div className="absolute top-0 left-0 w-1 h-full bg-[#d97757]"></div>
             <div className="text-sm font-medium text-ink mb-4 flex items-center gap-2 uppercase tracking-widest shrink-0">
               <FileText className="w-4 h-4 text-ink-muted" /> 文本直传
@@ -77,9 +106,9 @@ export default function NewTask({ onStartAnalysis }: NewTaskProps) {
             >
               开始审查
             </button>
-          </div>
+          </motion.div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
