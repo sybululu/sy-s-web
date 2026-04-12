@@ -1,20 +1,11 @@
 /*
- * Cloudflare Pages Headers Configuration
- * https://developers.cloudflare.com/pages/platform/headers/
- */
+  X-Content-Type-Options: nosniff
 
-[[headers]]
-  for = "/api/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization"
-    Access-Control-Max-Age = "86400"
+/*.js
+  Content-Type: application/javascript
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    X-XSS-Protection = "1; mode=block"
-    Referrer-Policy = "strict-origin-when-cross-origin"
+/*.mjs
+  Content-Type: application/javascript
+
+/assets/*.js
+  Content-Type: application/javascript
