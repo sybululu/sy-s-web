@@ -9,7 +9,7 @@ export default {
     if (
       url.pathname.startsWith('/api/') ||
       url.pathname.startsWith('/assets/') ||
-      url.pathname.match(/\.[^/]+$/)  // 任何带扩展名的文件
+      url.pathname.match(/\.[^/]+$/)
     ) {
       return fetch(request);
     }

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cp public/_headers dist/_headers && cp _routes.json dist/_routes.json",
+    "build:static": "vite build && cp public/_headers dist/_headers && cp _routes.json dist/_routes.json",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
@@ -24,6 +25,7 @@
     "vite": "^6.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
