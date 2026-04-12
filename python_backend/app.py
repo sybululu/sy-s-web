@@ -1,6 +1,11 @@
+"""
+隐私政策合规审查 API
+整合了 RAG 架构的法律知识库检索
+"""
 import os
 import json
 import re
+import logging
 from datetime import datetime
 from typing import List, Optional, Dict
 
@@ -12,19 +17,34 @@ from sqlalchemy.orm import Session
 
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, MT5ForConditionalGeneration
-from sentence_transformers import SentenceTransformer
-import faiss
-import numpy as np
 
-from models import User, Project, get_db, init_db
+from models import User, Project, get_db, init_db, Article, RetrievedChunk
 from auth import router as auth_router, get_current_user
+
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# ==========================================
+# 导入 RAG 模块
+# ==========================================
+try:
+    from src.loader import LegalKBLoader
+    from src.store import VectorStore
+    from src.search import Retriever
+    from src.config import get_config
+    RAG_AVAILABLE = True
+    logger.info("RAG 模块加载成功")
+except ImportError as e:
+    logger.warning(f"RAG 模块加载失败: {e}")
+    RAG_AVAILABLE = False
 
 # ==========================================
 # 模型加载 (HuggingFace Transformers)
 # ==========================================
 print("正在加载真实模型，这可能需要几分钟...")
 
-# 1. 加载 RoBERTa 风险分类模型 (替换为你自己的模型路径或 HF Repo)
+# 1. 加载 RoBERTa 风险分类模型
 tokenizer_roberta = AutoTokenizer.from_pretrained("hfl/chinese-roberta-wwm-ext")
 model_roberta = AutoModelForSequenceClassification.from_pretrained("./models/roberta-compliance", num_labels=12)
 model_roberta.eval()
@@ -34,17 +54,40 @@ tokenizer_mt5 = AutoTokenizer.from_pretrained("google/mt5-base")
 model_mt5 = MT5ForConditionalGeneration.from_pretrained("./models/mt5-compliance")
 model_mt5.eval()
 
-# 3. 加载 Sentence-BERT 向量化模型 (用于 RAG 检索)
-model_sbert = SentenceTransformer('shibing624/text2vec-base-chinese')
-
-# 4. 加载法律知识库 (FAISS 向量库)
-# 假设你已经提前把法律条文转成了向量并保存为 legal_index.index
-# index_faiss = faiss.read_index("./data/legal_index.index")
-# with open("./data/legal_texts.json", "r", encoding="utf-8") as f:
-#     legal_texts = json.load(f)
-
 print("模型加载完成！")
 
+# ==========================================
+# RAG 组件初始化
+# ==========================================
+legal_kb_loader: Optional[LegalKBLoader] = None
+vector_store: Optional[VectorStore] = None
+retriever: Optional[Retriever] = None
+
+def initialize_rag():
+    """初始化 RAG 组件"""
+    global legal_kb_loader, vector_store, retriever
+    
+    if not RAG_AVAILABLE:
+        logger.warning("RAG 模块不可用，跳过初始化")
+        return
+    
+    try:
+        config = get_config()
+        legal_kb_loader = LegalKBLoader(config.knowledge_dir)
+        vector_store = VectorStore(
+            embedding_model=config.embedding_model,
+            persist_path=config.vector_store_path
+        )
+        retriever = Retriever(loader=legal_kb_loader, vector_store=vector_store)
+        retriever.initialize()
+        logger.info("RAG 组件初始化完成")
+    except Exception as e:
+        logger.error(f"RAG 初始化失败: {e}")
+        # 不阻断主程序继续运行
+
+# ==========================================
+# FastAPI 应用设置
+# ==========================================
 app = FastAPI(title="隐私政策合规审查 API")
 
 # CORS 配置
@@ -63,23 +106,25 @@ init_db()
 app.include_router(auth_router)
 
 # ==========================================
-# 一、 合规指标体系与权重定义
+# 合规指标体系与权重定义
 # ==========================================
 INDICATORS = {
-    "过度收集敏感数据": {"weight": 0.15, "legal_basis": "《个人信息保护法》第六条'最小必要'原则及第二十九条"},
-    "未说明收集目的": {"weight": 0.12, "legal_basis": "《个人信息保护法》第十七条"},
-    "未获得明示同意": {"weight": 0.15, "legal_basis": "《个人信息保护法》第十四条"},
-    "收集范围超出服务需求": {"weight": 0.10, "legal_basis": "《个人信息保护法》第六条"},
-    "未明确第三方共享范围": {"weight": 0.08, "legal_basis": "《个人信息保护法》第二十三条"},
-    "未获得单独共享授权": {"weight": 0.12, "legal_basis": "《个人信息保护法》第二十三条"},
-    "未明确共享数据用途": {"weight": 0.08, "legal_basis": "《个人信息保护法》第二十三条及GDPR第四十六条"},
-    "未明确留存期限": {"weight": 0.05, "legal_basis": "《个人信息保护法》第十九条"},
-    "未说明数据销毁机制": {"weight": 0.05, "legal_basis": "《个人信息保护法》第四十七条"},
-    "未明确用户权利范围": {"weight": 0.05, "legal_basis": "《个人信息保护法》第四十四至四十八条"},
-    "未提供便捷权利行使途径": {"weight": 0.03, "legal_basis": "《个人信息保护法》第五十条"},
-    "未明确权利响应时限": {"weight": 0.02, "legal_basis": "《个人信息安全规范》GB/T 35273-2020"}
+    "过度收集敏感数据": {"weight": 0.15, "legal_basis": "《个人信息保护法》第六条'最小必要'原则及第二十九条", "id": "I1"},
+    "未说明收集目的": {"weight": 0.12, "legal_basis": "《个人信息保护法》第十七条", "id": "I2"},
+    "未获得明示同意": {"weight": 0.15, "legal_basis": "《个人信息保护法》第十四条", "id": "I3"},
+    "收集范围超出服务需求": {"weight": 0.10, "legal_basis": "《个人信息保护法》第六条", "id": "I4"},
+    "未明确第三方共享范围": {"weight": 0.08, "legal_basis": "《个人信息保护法》第二十三条", "id": "I5"},
+    "未获得单独共享授权": {"weight": 0.12, "legal_basis": "《个人信息保护法》第二十三条", "id": "I6"},
+    "未明确共享数据用途": {"weight": 0.08, "legal_basis": "《个人信息保护法》第二十三条及GDPR第四十六条", "id": "I7"},
+    "未明确留存期限": {"weight": 0.05, "legal_basis": "《个人信息保护法》第十九条", "id": "I8"},
+    "未说明数据销毁机制": {"weight": 0.05, "legal_basis": "《个人信息保护法》第四十七条", "id": "I9"},
+    "未明确用户权利范围": {"weight": 0.05, "legal_basis": "《个人信息保护法》第四十四至四十八条", "id": "I10"},
+    "未提供便捷权利行使途径": {"weight": 0.03, "legal_basis": "《个人信息保护法》第五十条", "id": "I11"},
+    "未明确权利响应时限": {"weight": 0.02, "legal_basis": "《个人信息安全规范》GB/T 35273-2020", "id": "I12"}
 }
 
+# 创建 ID 到指标名称的映射
+ID_TO_INDICATOR = {v["id"]: k for k, v in INDICATORS.items()}
 INDICATOR_KEYS = list(INDICATORS.keys())
 
 # ==========================================
@@ -122,11 +167,42 @@ def roberta_predict(sentence: str) -> Dict[str, float]:
         outputs = model_roberta(**inputs)
         probs = torch.sigmoid(outputs.logits).squeeze().tolist()
     
-    # 如果模型输出不是列表（比如只有1个标签），处理一下
     if not isinstance(probs, list):
         probs = [probs]
         
     return {INDICATOR_KEYS[i]: probs[i] for i in range(min(len(probs), len(INDICATOR_KEYS)))}
+
+def get_legal_basis_from_rag(violation_type: str, context: Optional[str] = None) -> str:
+    """
+    使用 RAG 检索获取法律依据
+    
+    Args:
+        violation_type: 违规类型ID，如 "I1"
+        context: 违规上下文描述
+        
+    Returns:
+        检索到的法律依据文本
+    """
+    if not RAG_AVAILABLE or retriever is None:
+        # 回退到静态配置
+        for name, info in INDICATORS.items():
+            if info["id"] == violation_type:
+                return info["legal_basis"]
+        return "《个人信息保护法》"
+    
+    try:
+        results = retriever.retrieve_by_violation_type(violation_type, context=context, top_k=3)
+        if results:
+            # 合并检索结果
+            legal_refs = []
+            for result in results[:2]:
+                ref = f"{result.law}{result.article_number}"
+                legal_refs.append(ref)
+            return "；".join(legal_refs) if legal_refs else INDICATORS.get(ID_TO_INDICATOR.get(violation_type, ""), {}).get("legal_basis", "《个人信息保护法》")
+    except Exception as e:
+        logger.error(f"RAG 检索失败: {e}")
+    
+    return INDICATORS.get(ID_TO_INDICATOR.get(violation_type, ""), {}).get("legal_basis", "《个人信息保护法》")
 
 # ==========================================
 # 全局异常处理
@@ -145,12 +221,71 @@ async def http_exception_handler(request, exc: HTTPException):
     )
 
 # ==========================================
+# 启动事件
+# ==========================================
+@app.on_event("startup")
+async def startup_event():
+    """应用启动时初始化 RAG"""
+    initialize_rag()
+
+# ==========================================
 # API 端点
 # ==========================================
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "timestamp": datetime.utcnow()}
+    """健康检查"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow(),
+        "rag_available": RAG_AVAILABLE,
+        "rag_initialized": retriever is not None if RAG_AVAILABLE else False
+    }
+
+@app.get("/api/v1/kb/status")
+async def get_kb_status():
+    """获取知识库状态"""
+    if not RAG_AVAILABLE or legal_kb_loader is None:
+        return {"available": False, "message": "RAG 模块不可用"}
+    
+    try:
+        meta = legal_kb_loader.get_coverage_summary()
+        return {
+            "available": True,
+            "version": meta.version,
+            "laws_count": meta.laws_count,
+            "total_articles": meta.total_articles,
+            "violation_types": list(meta.coverage.keys())
+        }
+    except Exception as e:
+        return {"available": False, "message": str(e)}
+
+@app.post("/api/v1/kb/search")
+async def search_knowledge(
+    query: str,
+    top_k: int = 5,
+    current_user: User = Depends(get_current_user)
+):
+    """检索法律知识库"""
+    if not RAG_AVAILABLE or retriever is None:
+        raise HTTPException(status_code=503, detail="RAG 模块不可用")
+    
+    try:
+        results = retriever.search(query, top_k=top_k)
+        return {
+            "query": query,
+            "results": [
+                {
+                    "text": r.text,
+                    "source": r.source,
+                    "score": r.score,
+                    "metadata": r.metadata
+                }
+                for r in results
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"检索失败: {str(e)}")
 
 @app.post("/api/v1/analyze", response_model=AnalyzeResponse)
 async def analyze(
@@ -168,10 +303,16 @@ async def analyze(
             if prob > 0.5:
                 violation_flags[indicator] = 1
                 if not any(v["indicator"] == indicator for v in violations_list):
+                    # 获取违规类型ID
+                    violation_id = INDICATORS[indicator]["id"]
+                    # 使用 RAG 获取法律依据
+                    legal_basis = get_legal_basis_from_rag(violation_id, context=sentence)
+                    
                     violations_list.append({
                         "indicator": indicator,
+                        "violation_id": violation_id,
                         "snippet": sentence,
-                        "legal_basis": INDICATORS[indicator]["legal_basis"]
+                        "legal_basis": legal_basis
                     })
 
     penalty = sum(INDICATORS[ind]["weight"] * vi for ind, vi in violation_flags.items())
@@ -211,17 +352,12 @@ async def rectify_snippet(
     request: RectifyRequest,
     current_user: User = Depends(get_current_user)
 ):
-    # a. 检索 (Retrieve)
-    # query_vector = model_sbert.encode([request.original_snippet])
-    # D, I = index_faiss.search(query_vector, k=3)
-    # retrieved_cases = [legal_texts[str(idx)] for idx in I[0]]
-    # retrieved_context = " ".join(retrieved_cases)
+    """整改违规条款"""
+    # 使用 RAG 检索相关法律条款
+    legal_context = get_legal_basis_from_rag(request.violation_type, context=request.original_snippet)
     
-    # 由于没有真实的 FAISS 索引文件，这里简化为直接使用模型生成
-    retrieved_context = INDICATORS.get(request.violation_type, {}).get("legal_basis", "《个人信息保护法》")
-    
-    # b. 生成 (Generate)
-    prompt = f"请根据以下合规规范，修改违规条款：\n规范：{retrieved_context}\n原条款：{request.original_snippet}\n修改后："
+    # 使用 mT5 生成整改建议
+    prompt = f"请根据以下合规规范，修改违规条款：\n规范：{legal_context}\n原条款：{request.original_snippet}\n修改后："
     inputs = tokenizer_mt5(prompt, return_tensors="pt", truncation=True, max_length=512)
     with torch.no_grad():
         outputs = model_mt5.generate(**inputs, max_length=128)
@@ -229,7 +365,7 @@ async def rectify_snippet(
     
     return {
         "suggested_text": suggested_text,
-        "legal_basis": retrieved_context
+        "legal_basis": legal_context
     }
 
 @app.post("/api/v1/upload")
@@ -321,7 +457,7 @@ async def export_report(
 -------
 """
     for i, v in enumerate(violations, 1):
-        report += f"\n{i}. {v.get('indicator', '未知类别')}\n"
+        report += f"\n{i}. {v.get('indicator', '未知类别')} (ID: {v.get('violation_id', 'N/A')})\n"
         report += f"   原文：{v.get('snippet', '未知')}\n"
         report += f"   依据：{v.get('legal_basis', '未知')}\n"
     
