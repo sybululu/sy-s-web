@@ -66,7 +66,9 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
 
   // Calculate top risk categories for current project
   const categoryCounts = currentProject.clauses.reduce((acc, clause) => {
-    acc[clause.category] = (acc[clause.category] || 0) + 1;
+    // 使用 categoryName（中文名）进行统计，如果不存在则使用 category
+    const catKey = clause.categoryName || clause.category;
+    acc[catKey] = (acc[catKey] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
   

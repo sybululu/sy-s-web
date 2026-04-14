@@ -118,7 +118,8 @@ export default function App() {
         clauses: detail.violations.map((v: any, index: number) => ({
           id: `CL-${Math.floor(Math.random() * 9000) + 1000}`,
           location: v.location || `第${index + 1}节`,
-          category: v.category || v.indicator || '未知类别',
+          category: v.violation_id || v.category || v.indicator || '未知类别',  // ID 用于 API 调用
+          categoryName: v.category_name || v.indicator || '未知类别',  // 中文名称用于显示
           snippet: v.snippet || v.originalText || '',
           riskLevel: detail.risk_level === '高风险' ? 'high' : 'medium',
           reason: v.reason || v.indicator || '',
@@ -193,7 +194,8 @@ export default function App() {
         clauses: result.violations.map((v: any, index: number) => ({
           id: `CL-${Math.floor(Math.random() * 9000) + 1000}`,
           location: v.location || `第${index + 1}节`,
-          category: v.category || v.indicator || '未知类别',
+          category: v.violation_id || v.category || v.indicator || '未知类别',  // ID 用于 API 调用
+          categoryName: v.category_name || v.indicator || '未知类别',  // 中文名称用于显示
           snippet: v.snippet || v.originalText || '',
           riskLevel: result.risk_level === '高风险' ? 'high' : 'medium',
           reason: v.reason || v.indicator || '',

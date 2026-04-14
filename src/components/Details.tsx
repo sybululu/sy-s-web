@@ -114,7 +114,7 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
                   >
                     <td className="px-4 py-3 text-xs font-mono text-ink-muted">{clause.id}</td>
                     <td className="px-4 py-3 text-xs text-ink-muted">{clause.location}</td>
-                    <td className="px-4 py-3 text-sm text-ink font-medium">{clause.category}</td>
+                    <td className="px-4 py-3 text-sm text-ink font-medium">{clause.categoryName || clause.category}</td>
                     <td className="px-4 py-3 text-sm text-ink-muted truncate max-w-md" title={clause.snippet}>
                       {clause.snippet}
                     </td>

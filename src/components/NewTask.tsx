@@ -1,5 +1,5 @@
 import { Upload, Globe, FileText, ArrowRight } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { motion } from 'motion/react';
 
 interface NewTaskProps {
@@ -37,7 +37,7 @@ export default function NewTask({ onStartAnalysis }: NewTaskProps) {
   const [textInput, setTextInput] = useState('');
   const [fileError, setFileError] = useState<string | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFileError(null);
     const file = e.target.files?.[0];
     

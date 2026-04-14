@@ -64,7 +64,8 @@ export type RiskLevel = 'high' | 'medium' | 'low';
 export interface Clause {
   id: string;
   location: string;
-  category: string;
+  category: string;      // 违规 ID（如 "I5"），用于 API 调用
+  categoryName?: string; // 中文名称（如 "未明确第三方共享范围"），用于显示
   snippet: string;
   riskLevel: RiskLevel;
   reason: string;
