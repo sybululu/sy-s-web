@@ -130,9 +130,9 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
                     <td className="px-4 py-3 text-right">
                       <button 
                         onClick={() => onOpenDrawer(clause)}
-                        className="text-ink-muted hover:text-ink font-medium text-xs flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-all"
+                        className="text-ink hover:text-[#d97757] font-medium text-xs flex items-center gap-1 ml-auto transition-all cursor-pointer"
                       >
-                        审查 <ArrowRight className="w-3 h-3" />
+                        审查
                       </button>
                     </td>
                   </motion.tr>

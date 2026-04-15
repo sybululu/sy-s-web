@@ -1,0 +1,11 @@
+{
+  "name": "sy-s-web",
+  "compatibility_flags": ["nodejs_compat"],
+  "builds": [
+    { "src": "package.json", "use": "@cloudflare/pages-plugin-build-static" }
+  ],
+  "routes": {
+    "include": ["/*"],
+    "exclude": ["/assets/*"]
+  }
+}
