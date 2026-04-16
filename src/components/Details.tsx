@@ -120,11 +120,13 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${
-                        clause.riskLevel === 'high' 
-                          ? 'bg-red-50 text-red-700 border-red-200' 
-                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                        clause.riskLevel === 'high'
+                          ? 'bg-red-50 text-red-700 border-red-200'
+                          : clause.riskLevel === 'medium'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : 'bg-green-50 text-green-700 border-green-200'
                       }`}>
-                        {clause.riskLevel === 'high' ? '高危' : '中度'}
+                        {clause.riskLevel === 'high' ? '高危' : clause.riskLevel === 'medium' ? '中度' : '低危'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">

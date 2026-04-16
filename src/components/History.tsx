@@ -29,8 +29,26 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 6;
 
+  // 时间筛选逻辑
+  const isWithinTimeRange = (dateStr: string): boolean => {
+    if (timeFilter === 'all') return true;
+    
+    const projectDate = new Date(dateStr);
+    const now = new Date();
+    const diffTime = now.getTime() - projectDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    switch (timeFilter) {
+      case '7days': return diffDays <= 7;
+      case '30days': return diffDays <= 30;
+      case '90days': return diffDays <= 90;
+      default: return true;
+    }
+  };
+
   const filteredProjects = projects.filter(p => {
     if (riskFilter !== 'all' && p.riskStatus !== riskFilter) return false;
+    if (!isWithinTimeRange(p.date)) return false;
     return true;
   });
 
@@ -86,8 +104,8 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
               className="text-sm glass-input rounded-md px-3 py-1.5 outline-none focus:border-ink cursor-pointer"
             >
               <option value="all">全部风险</option>
-              <option value="极高风险">极高风险</option>
-              <option value="中度风险">中度风险</option>
+              <option value="高风险">高风险</option>
+              <option value="中等风险">中等风险</option>
               <option value="低风险">低风险</option>
             </select>
           </div>

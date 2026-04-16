@@ -54,20 +54,42 @@ function handleNetworkError(error: unknown): never {
   throw new ApiError('发生未知网络错误', undefined, 'UNKNOWN');
 }
 
-export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<any> {
+export async function apiFetch(endpoint: string, options: RequestInit = {}, externalSignal?: AbortSignal): Promise<any> {
   const isFormData = options.body instanceof FormData;
+  
+  // 创建内部的 AbortController
+  const internalController = new AbortController();
+  const timeoutId = setTimeout(() => internalController.abort(), REQUEST_TIMEOUT);
+  
+  // 合并信号：如果外部信号中止，内部信号也中止
+  const abortHandler = () => internalController.abort();
+  if (externalSignal) {
+    externalSignal.addEventListener('abort', abortHandler);
+  }
   
   let response: Response;
   try {
-    response = await fetchWithTimeout(`${API_BASE}${endpoint}`, {
+    response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
+      signal: internalController.signal, // 使用内部 controller 的 signal
       headers: {
         ...getAuthHeaders(isFormData),
         ...options.headers,
       },
     });
   } catch (error) {
+    // 如果是外部信号中止，重新抛出
+    if (externalSignal?.aborted) {
+      const cancelError = new Error('请求已取消');
+      cancelError.name = 'CanceledError';
+      throw cancelError;
+    }
     handleNetworkError(error);
+  } finally {
+    clearTimeout(timeoutId);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', abortHandler);
+    }
   }
   
   // 处理 401 未授权
@@ -123,7 +145,7 @@ export const api = {
     }),
 
   // 分析
-  analyze: (text: string, source_type: string = 'text'): Promise<{
+  analyze: (text: string, source_type: string = 'text', signal?: AbortSignal): Promise<{
     id: string;
     name: string;
     score: number;
@@ -133,7 +155,7 @@ export const api = {
     apiFetch('/api/v1/analyze', {
       method: 'POST',
       body: JSON.stringify({ text, source_type })
-    }),
+    }, signal),
     
   rectify: (original_snippet: string, violation_type: string): Promise<{ suggested_text: string; legal_basis: string }> =>
     apiFetch('/api/v1/rectify', {

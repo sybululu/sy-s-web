@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ViewType, Project, Clause, ToastState, User } from './types';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -31,6 +31,17 @@ export default function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState('');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 取消分析函数
+  const cancelAnalysis = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsAnalyzing(false);
+    setAnalysisStep('');
+  }, []);
 
   useEffect(() => {
     // 检查本地是否已有 token
@@ -121,7 +132,7 @@ export default function App() {
           category: v.violation_id || v.category || v.indicator || '未知类别',  // ID 用于 API 调用
           categoryName: v.category_name || v.indicator || '未知类别',  // 中文名称用于显示
           snippet: v.snippet || v.originalText || '',
-          riskLevel: detail.risk_level === '高风险' ? 'high' : 'medium',
+          riskLevel: v.risk_level || 'low',  // 使用后端返回的基于权重的风险等级
           reason: v.reason || v.indicator || '',
           originalText: v.originalText || v.snippet || '',
           suggestedText: v.suggestedText || '【系统建议】请根据合规要求修改。',
@@ -164,6 +175,9 @@ export default function App() {
       return;
     }
     
+    // 创建 AbortController 用于取消请求
+    abortControllerRef.current = new AbortController();
+    
     setIsAnalyzing(true);
     setAnalysisStep('正在提取文本内容...');
     
@@ -178,8 +192,8 @@ export default function App() {
         textToAnalyze = urlRes.text;
       }
       
-      setAnalysisStep('正在调用 RAG-mT5 引擎进行合规性比对...');
-      const result = await api.analyze(textToAnalyze, type);
+      setAnalysisStep('正在进行合规性分析...');
+      const result = await api.analyze(textToAnalyze, type, abortControllerRef.current.signal);
       
       setAnalysisStep('正在生成审查报告与整改建议...');
       
@@ -188,16 +202,16 @@ export default function App() {
         id: result.id,
         name: result.name,
         date: new Date().toISOString().split('T')[0],
-        description: `基于大语言模型风险识别与整改建议生成的自动化审查报告。共发现 ${result.violations.length} 项潜在风险。`,
+        description: `自动化合规审查报告。共发现 ${result.violations.length} 项潜在风险。`,
         score: result.score,
-        riskStatus: result.risk_level,
+        riskStatus: result.risk_level,  // 整个审查的风险等级
         clauses: result.violations.map((v: any, index: number) => ({
           id: `CL-${Math.floor(Math.random() * 9000) + 1000}`,
           location: v.location || `第${index + 1}节`,
           category: v.violation_id || v.category || v.indicator || '未知类别',  // ID 用于 API 调用
           categoryName: v.category_name || v.indicator || '未知类别',  // 中文名称用于显示
           snippet: v.snippet || v.originalText || '',
-          riskLevel: result.risk_level === '高风险' ? 'high' : 'medium',
+          riskLevel: v.risk_level || 'low',  // 使用后端返回的基于权重的风险等级
           reason: v.reason || v.indicator || '',
           originalText: v.originalText || v.snippet || '',
           suggestedText: v.suggestedText || '【系统建议】请根据合规要求修改。',
@@ -213,10 +227,17 @@ export default function App() {
       setSearchQuery('');
       showToast('审计完成，已生成合规报告');
     } catch (error: any) {
-      console.error(error);
-      showToast(error.message || '分析失败，请重试', 'error');
+      // 检查是否是用户取消的请求
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        showToast('已取消审查', 'error');
+      } else {
+        console.error(error);
+        showToast(error.message || '分析失败，请重试', 'error');
+      }
     } finally {
+      abortControllerRef.current = null;
       setIsAnalyzing(false);
+      setAnalysisStep('');
     }
   };
 
@@ -266,7 +287,8 @@ export default function App() {
       <Sidebar 
         currentView={currentView} 
         onViewChange={handleViewChange} 
-        onLogout={handleLogout} 
+        onLogout={handleLogout}
+        currentUser={currentUser}
       />
       
       <main className="flex-1 flex flex-col overflow-hidden bg-transparent">
@@ -320,7 +342,13 @@ export default function App() {
         <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[200] flex flex-col items-center justify-center">
           <div className="w-16 h-16 border-4 border-slate-200 border-t-ink rounded-full animate-spin mb-6"></div>
           <h3 className="text-xl font-serif text-ink tracking-tight mb-2">深度审计中</h3>
-          <p className="text-sm text-ink-muted font-mono animate-pulse">{analysisStep}</p>
+          <p className="text-sm text-ink-muted font-mono animate-pulse mb-6">{analysisStep}</p>
+          <button
+            onClick={cancelAnalysis}
+            className="px-6 py-2 bg-ink/10 text-ink border border-ink/20 rounded-lg hover:bg-ink/20 transition-colors text-sm font-medium"
+          >
+            取消审查
+          </button>
         </div>
       )}
 

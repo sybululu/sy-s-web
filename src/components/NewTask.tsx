@@ -89,7 +89,7 @@ export default function NewTask({ onStartAnalysis }: NewTaskProps) {
             <h4 className="text-2xl font-serif text-ink mb-3">点击或拖拽文件至此处</h4>
             <p className="text-sm text-ink-muted mb-8 max-w-md leading-relaxed">
               支持 TXT, MD, JSON 格式，单文件最大 20MB。<br/>
-              系统将自动解析文本内容并进行向量化处理，调用 RAG-mT5 引擎进行深度合规审查。
+              系统将自动解析文本内容并进行深度合规审查。
             </p>
             <button className="bg-white/80 border border-white/60 px-6 py-2.5 rounded-lg text-sm font-medium text-ink transition-colors hover:bg-white shadow-sm flex items-center gap-2 pointer-events-auto">
               浏览本地文件 <ArrowRight className="w-4 h-4 text-ink-muted" />

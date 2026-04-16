@@ -1,20 +1,25 @@
 import { ShieldCheck, LayoutDashboard, PlusSquare, Gavel, History, LogOut } from 'lucide-react';
-import { ViewType } from '../types';
+import { ViewType, User } from '../types';
 import { motion } from 'motion/react';
 
 interface SidebarProps {
   currentView: ViewType;
   onViewChange: (view: ViewType) => void;
   onLogout: () => void;
+  currentUser?: User | null;
 }
 
-export default function Sidebar({ currentView, onViewChange, onLogout }: SidebarProps) {
+export default function Sidebar({ currentView, onViewChange, onLogout, currentUser }: SidebarProps) {
   const navItems = [
     { id: 'overview', label: '总览仪表盘', icon: LayoutDashboard },
     { id: 'new-task', label: '新建审查任务', icon: PlusSquare },
     { id: 'details', label: '违规条款明细', icon: Gavel },
     { id: 'history', label: '历史审查报告', icon: History },
   ];
+
+  // 获取用户显示名称
+  const displayName = currentUser?.name || currentUser?.email?.split('@')[0] || '用户';
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <motion.aside 
@@ -63,11 +68,11 @@ export default function Sidebar({ currentView, onViewChange, onLogout }: Sidebar
       <div className="mt-auto pt-6 px-4 border-t border-white/30">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-8 h-8 rounded-full bg-white/60 flex items-center justify-center text-ink font-medium text-xs border border-white/60 shadow-sm">
-            WZ
+            {initials}
           </div>
           <div>
-            <div className="text-sm font-medium text-ink">企业管理员</div>
-            <div className="text-[10px] text-ink-muted">高级合规审计师</div>
+            <div className="text-sm font-medium text-ink">{displayName}</div>
+            <div className="text-[10px] text-ink-muted">合规审计员</div>
           </div>
         </div>
         <button

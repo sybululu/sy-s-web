@@ -13,6 +13,7 @@ interface RegisterProps {
 }
 
 export default function Register({ onRegister, onSwitchToLogin, onShowToast }: RegisterProps) {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -25,6 +26,10 @@ export default function Register({ onRegister, onSwitchToLogin, onShowToast }: R
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!username.trim()) {
+      onShowToast?.('请输入用户名', 'error');
+      return;
+    }
     if (!agreed) {
       onShowToast?.('请先阅读并勾选隐私协议', 'error');
       return;
@@ -36,9 +41,7 @@ export default function Register({ onRegister, onSwitchToLogin, onShowToast }: R
 
     setIsLoading(true);
     try {
-      // 默认使用邮箱前缀作为名称
-      const name = email.split('@')[0];
-      await api.register(email, password, name);
+      await api.register(email, password, username.trim());
       
       // 注册成功后自动登录
       const loginData = await api.login(email, password);
@@ -90,6 +93,17 @@ export default function Register({ onRegister, onSwitchToLogin, onShowToast }: R
           <p className="text-ink-muted text-sm">开始您的高级合规审计之旅</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }}>
+            <label className="block text-sm font-medium text-ink mb-1.5">用户名</label>
+            <input
+              className="w-full glass-input rounded-lg py-2 px-3 focus:border-ink focus:ring-1 focus:ring-ink outline-none transition-all text-sm"
+              placeholder="请输入用户名"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </motion.div>
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
             <label className="block text-sm font-medium text-ink mb-1.5">注册邮箱</label>
             <input
