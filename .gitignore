@@ -5,3 +5,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# 后端代码（独立仓库管理）
+python_backend/

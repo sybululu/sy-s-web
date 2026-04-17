@@ -157,10 +157,15 @@ export const api = {
       body: JSON.stringify({ text, source_type })
     }, signal),
     
-  rectify: (original_snippet: string, violation_type: string, legal_basis?: string): Promise<{ suggested_text: string; legal_basis: string }> =>
+  rectify: (
+    original_snippet: string,
+    violation_type: string,
+    legal_basis?: string,
+    mode?: 'summary' | 'rewrite'
+  ): Promise<{ suggested_text: string; legal_basis: string; mode: string }> =>
     apiFetch('/api/v1/rectify', {
       method: 'POST',
-      body: JSON.stringify({ original_snippet, violation_type, legal_basis })
+      body: JSON.stringify({ original_snippet, violation_type, legal_basis, mode: mode || 'rewrite' })
     }),
 
   uploadFile: (file: File): Promise<{ text: string }> => {

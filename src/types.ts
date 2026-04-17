@@ -1,8 +1,7 @@
 /**
  * 前端类型定义
  *
- * 违规相关常量（VIOLATION_NAMES, getRiskLevel, getRiskStatus）已迁移至
- * config/violation-config.ts，此处仅为向后兼容的 re-export。
+ * 违规相关常量已迁移至 config/violation-config.ts，此处仅为向后兼容的 re-export。
  * 新代码请直接从 config/violation-config.ts 导入。
  */
 
@@ -13,11 +12,19 @@ export {
   VIOLATION_WEIGHTS,
   RISK_LEVEL,
   type RiskLevelType,
+  DIMENSION_GROUPS,
+  type DimensionKey,
+  WEIGHT_THRESHOLDS,
+  SCORE_THRESHOLDS,
   getRiskLevel,
   getRiskStatus,
   getRiskColorClass,
   getRiskDotClass,
   getViolationName,
+  getViolationDetailById,
+  getViolationWeight,
+  type ViolationDetailInfo,
+  VIOLATION_DETAILS,
 } from './config/violation-config';
 
 // ─── 业务类型定义 ───────────────────────────────────────────────>
@@ -46,10 +53,10 @@ export interface Clause {
   originalText: string;       // 原始条款文本
   suggestedText: string;      // AI 改写建议
   reason: string;             // 违规原因（人类可读名称）
-  category: number | string;  // 违规类别编号
+  category: number | string;  // 违规类别编号（后端传 "I1"~"I12" 或数字）
   categoryName?: string;      // 违规类别中文名称（后端适配后优先使用）
   snippet?: string;           // 条款摘要/片段（用于搜索过滤）
-  weight?: number;            // 权重
+  weight?: number;            // 权重（来自论文表 3-2）
   probability?: number;       // 模型预测概率
   riskLevel?: string;         // 风险等级（高/中/低）
   location: string;           // 条款位置/来源
@@ -72,35 +79,9 @@ export interface Project {
   policyText?: string;
 }
 
-/** 分析请求参数 */
-export interface AnalysisRequest {
-  policy_text: string;
-  project_name: string;
-  description?: string;
-}
-
-/** 分析响应（后端原始格式） */
-export interface AnalysisResponse {
-  project_id: number;
-  score: number;
-  total_clauses: number;
-  clauses: Array<{
-    id: number;
-    original_text: string;
-    suggested_text: string;
-    indicator: string;
-    violation_id: number;
-    probability: number;
-    weight: number;
-    location: string;
-    legal_basis: string;
-    diff_suggested_html: string;
-  }>;
-}
-
 // ─── 后端 → 前端 Clause 映射工具 ────────────────────────────────>
 
-import { getViolationName, getRiskLevel, RISK_LEVEL } from './config/violation-config';
+import { getViolationName, getViolationWeight, getRiskLevel } from './config/violation-config';
 
 /**
  * 将后端返回的原始 clause 对象映射为前端 Clause 类型
@@ -112,7 +93,9 @@ import { getViolationName, getRiskLevel, RISK_LEVEL } from './config/violation-c
  */
 export function mapRawToClause(raw: Record<string, any>, index?: number): Clause {
   const categoryId = raw.violation_id ?? raw.category ?? 0;
-  const weight = raw.weight ?? raw.probability ?? 0;
+  // 优先使用后端返回的 weight，否则根据 violation_id 从权威配置中查找
+  const rawWeight = raw.weight ?? raw.probability;
+  const weight = rawWeight ?? getViolationWeight(categoryId);
 
   return {
     id: raw.id ?? `CL-${Math.floor(Math.random() * 9000) + 1000}`,

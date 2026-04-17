@@ -1,6 +1,6 @@
 import { Upload, TrendingUp, ShieldAlert, CheckCircle2, AlertCircle, FileText, Activity, BarChart3, ArrowRight } from 'lucide-react';
 import { Project, ViewType } from '../types';
-import { RISK_LEVEL } from '../config/violation-config';
+import { RISK_LEVEL, SCORE_THRESHOLDS } from '../config/violation-config';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'motion/react';
 
@@ -39,7 +39,7 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
         </div>
         <h3 className="text-xl font-serif text-ink mb-3">暂无审查数据</h3>
         <p className="text-ink-muted mb-8 max-w-md leading-relaxed">
-          您还没有进行过任何隐私政策审查。点击下方按钮新建一个审查任务，体验基于 RoBERTa 与 mT5 的智能合规检测。
+          您还没有进行过任何隐私政策审查。点击下方按钮新建一个审查任务，体验基于 AI 的智能合规检测。
         </p>
         <button 
           onClick={() => onViewChange('new-task')} 
@@ -51,12 +51,13 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
     );
   }
 
-  const isHighRisk = currentProject.score < 60;
+  // 使用官方阈值（与后端 app.py / violation-config.ts SCORE_THRESHOLDS 对齐）
+  const isHighRisk = currentProject.score < SCORE_THRESHOLDS.HIGH_RISK;
 
-  // Calculate dynamic stats for current project
-  const highCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.HIGH || c.riskLevel === 'high').length;
-  const mediumCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.MEDIUM || c.riskLevel === 'medium').length;
-  const lowCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.LOW || c.riskLevel === 'low').length;
+  // Calculate dynamic stats for current project（riskLevel 已由 mapRawToClause 统一归一化为中文）
+  const highCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.HIGH).length;
+  const mediumCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.MEDIUM).length;
+  const lowCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.LOW).length;
 
   // Calculate dynamic global stats
   const totalAudits = projects.length;

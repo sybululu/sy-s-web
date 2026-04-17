@@ -1,6 +1,6 @@
 import { FileText, Filter, Download, ArrowRight, ChevronLeft, ChevronRight, ShieldAlert, X } from 'lucide-react';
 import { Project, Clause } from '../types';
-import { VIOLATION_DETAILS, getRiskColorClass, getRiskDotClass } from '../config/violation-config';
+import { VIOLATION_DETAILS, getRiskColorClass, getRiskDotClass, getRiskLevel, DIMENSION_GROUPS, RISK_LEVEL } from '../config/violation-config';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -10,21 +10,15 @@ interface DetailsProps {
   onDownload: () => void;
 }
 
-// 12类违规类别定义
-const VIOLATION_CATEGORIES = [
-  { id: 'I1', name: '过度收集敏感数据', risk: 'high' },
-  { id: 'I2', name: '未说明收集目的', risk: 'high' },
-  { id: 'I3', name: '未获得明示同意', risk: 'high' },
-  { id: 'I4', name: '收集范围超出服务需求', risk: 'medium' },
-  { id: 'I5', name: '未明确第三方共享范围', risk: 'medium' },
-  { id: 'I6', name: '未获得单独共享授权', risk: 'high' },
-  { id: 'I7', name: '未明确共享数据用途', risk: 'medium' },
-  { id: 'I8', name: '未明确留存期限', risk: 'low' },
-  { id: 'I9', name: '未说明数据销毁机制', risk: 'low' },
-  { id: 'I10', name: '未明确用户权利范围', risk: 'low' },
-  { id: 'I11', name: '未提供便捷权利行使途径', risk: 'low' },
-  { id: 'I12', name: '未明确权利响应时限', risk: 'low' },
-];
+// 从统一配置生成筛选列表（与论文表 3-1 / 后端 INDICATORS 一致）
+const VIOLATION_CATEGORIES = VIOLATION_DETAILS.map(v => ({
+  id: v.id,
+  name: v.name,
+  risk: getRiskLevel(v.weight) === RISK_LEVEL.HIGH ? 'high'
+    : getRiskLevel(v.weight) === RISK_LEVEL.MEDIUM ? 'medium'
+    : 'low',
+  dimension: v.dimension,
+}));
 
 const containerVariants = {
   hidden: { opacity: 0 },
