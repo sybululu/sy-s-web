@@ -46,10 +46,17 @@ export default function Register({ onRegister, onSwitchToLogin, onShowToast }: R
       // 注册成功后自动登录
       const loginData = await api.login(email, password);
       localStorage.setItem('token', loginData.token);
-      localStorage.setItem('user', JSON.stringify(loginData.user));
+      const rawUser = loginData.user as Record<string, any>;
+      const normalizedUser: User = {
+        id: typeof rawUser.id === 'number' ? rawUser.id : parseInt(rawUser.id, 10),
+        email: rawUser.email || '',
+        username: rawUser.username || rawUser.name || '',
+        name: rawUser.name,
+      };
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
       
       onShowToast?.('注册成功，已自动登录', 'success');
-      onRegister(loginData.token, loginData.user);
+      onRegister(loginData.token, normalizedUser);
     } catch (error: any) {
       onShowToast?.(error.message || '注册失败，请检查网络连接后重试', 'error');
     } finally {

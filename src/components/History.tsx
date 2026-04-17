@@ -146,7 +146,7 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
             <tbody className="divide-y divide-white/20">
               {currentData.length > 0 ? (
                 currentData.map((project, index) => {
-                  const isHighRisk = project.riskStatus === '极高风险';
+                  const isHighRisk = project.riskStatus === '高风险';
                   const isLowRisk = project.riskStatus === '低风险';
                   
                   return (

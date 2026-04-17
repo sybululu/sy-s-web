@@ -2,12 +2,13 @@ import { Project } from './types';
 
 export const MOCK_PROJECTS: Project[] = [
   {
-    id: 'p1',
+    id: 1,
     name: '某某金融App隐私政策审查',
     date: '2023-11-20',
     description: '针对 V3.2.1 版本的全量审查。发现涉及跨境传输及超范围收集敏感权限问题，合规风险较大。',
     score: 45.2,
-    riskStatus: '极高风险',
+    riskStatus: '高风险',
+    clauseCount: 2,
     clauses: [
       {
         id: 'CL-8021',
@@ -38,21 +39,23 @@ export const MOCK_PROJECTS: Project[] = [
     ]
   },
   {
-    id: 'p2',
+    id: 2,
     name: '某电商平台支付合规审计',
     date: '2023-11-15',
     description: '支付插件权限调用审计。符合央行个人金融信息保护要求，仅存在极小文字表述优化项。',
     score: 94.8,
     riskStatus: '低风险',
+    clauseCount: 0,
     clauses: []
   },
   {
-    id: 'p3',
+    id: 3,
     name: '在线教育平台隐私协议补录',
     date: '2023-11-10',
     description: '主要集中在用户注销账号后的数据保存时限问题，建议缩短至 180 天以内。',
     score: 72.5,
-    riskStatus: '中度风险',
+    riskStatus: '中等风险',
+    clauseCount: 1,
     clauses: [
       {
         id: 'CL-6032',

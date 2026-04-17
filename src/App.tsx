@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ViewType, Project, Clause, ToastState, User } from './types';
+import { ViewType, Project, Clause, ToastState, User, mapRawToClauses, getRiskStatus } from './types';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Overview from './components/Overview';
@@ -72,6 +72,7 @@ export default function App() {
               description: `审查得分: ${p.score}，风险等级: ${p.risk_level}`,
               score: p.score,
               riskStatus: p.risk_level,
+              clauseCount: 0,
               clauses: [] // 列表接口可能不返回 clauses，需要点进去再拉取，或者后端直接返回
             }));
             setProjects(mappedProjects);
@@ -123,23 +124,10 @@ export default function App() {
   const handleSelectProject = async (project: Project) => {
     try {
       // 尝试获取项目详情（包含 clauses）
-      const detail = await api.getProject(project.id);
+      const detail = await api.getProject(String(project.id));
       const fullProject: Project = {
         ...project,
-        clauses: detail.violations.map((v: any, index: number) => ({
-          id: `CL-${Math.floor(Math.random() * 9000) + 1000}`,
-          location: v.location || `第${index + 1}节`,
-          category: v.violation_id || v.category || v.indicator || '未知类别',  // ID 用于 API 调用
-          categoryName: v.category_name || v.indicator || '未知类别',  // 中文名称用于显示
-          snippet: v.snippet || v.originalText || '',
-          riskLevel: v.risk_level || 'low',  // 使用后端返回的基于权重的风险等级
-          reason: v.reason || v.indicator || '',
-          originalText: v.originalText || v.snippet || '',
-          suggestedText: v.suggestedText || '【系统建议】请根据合规要求修改。',
-          diffOriginalHtml: v.diffOriginalHtml || v.snippet || '',
-          diffSuggestedHtml: v.diffSuggestedHtml || `<span class="diff-add">${v.suggestedText || '建议修改'}</span>`,
-          legalBasis: v.legalBasis || v.legal_basis || ''
-        }))
+        clauses: mapRawToClauses(detail.violations || []),
       };
       setCurrentProject(fullProject);
     } catch (err) {
@@ -174,7 +162,7 @@ export default function App() {
   const handleDownload = () => {
     if (!currentProject) return;
     try {
-      api.exportReport(currentProject.id);
+      api.exportReport(String(currentProject.id));
       showToast('合规报告导出成功');
     } catch (err) {
       showToast('导出失败', 'error');
@@ -211,26 +199,14 @@ export default function App() {
       
       // Map Python backend response to frontend Project structure
       const newProject: Project = {
-        id: result.id,
+        id: typeof result.id === 'string' ? parseInt(result.id, 10) : (result.id as number),
         name: result.name,
         date: new Date().toISOString().split('T')[0],
         description: `自动化合规审查报告。共发现 ${result.violations.length} 项潜在风险。`,
         score: result.score,
         riskStatus: result.risk_level,  // 整个审查的风险等级
-        clauses: result.violations.map((v: any, index: number) => ({
-          id: `CL-${Math.floor(Math.random() * 9000) + 1000}`,
-          location: v.location || `第${index + 1}节`,
-          category: v.violation_id || v.category || v.indicator || '未知类别',  // ID 用于 API 调用
-          categoryName: v.category_name || v.indicator || '未知类别',  // 中文名称用于显示
-          snippet: v.snippet || v.originalText || '',
-          riskLevel: v.risk_level || 'low',  // 使用后端返回的基于权重的风险等级
-          reason: v.reason || v.indicator || '',
-          originalText: v.originalText || v.snippet || '',
-          suggestedText: v.suggestedText || '【系统建议】请根据合规要求修改。',
-          diffOriginalHtml: v.diffOriginalHtml || v.snippet || '',
-          diffSuggestedHtml: v.diffSuggestedHtml || `<span class="diff-add">${v.suggestedText || '建议修改'}</span>`,
-          legalBasis: v.legalBasis || v.legal_basis || ''
-        }))
+        clauseCount: result.violations?.length || 0,
+        clauses: mapRawToClauses(result.violations || []),
       };
       
       setProjects(prev => [newProject, ...prev]);

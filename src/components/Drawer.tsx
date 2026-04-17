@@ -39,7 +39,7 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
     setIsGenerating(true);
     try {
       const { api } = await import('../utils/api');
-      const res = await api.rectify(currentClause.originalText, currentClause.category, currentClause.legalBasis);
+      const res = await api.rectify(currentClause.originalText, String(currentClause.category), currentClause.legalBasis);
       setEditedText(res.suggested_text);
       setLocalDiffHtml(`<span class="diff-add">${res.suggested_text}</span>`);
       setLocalLegalBasis(res.legal_basis);
@@ -132,7 +132,7 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
           >
             <div className="px-8 py-5 border-b border-white/30 flex justify-between items-center bg-white/40">
               <div>
-                <h3 className="text-xl font-serif text-ink tracking-tight">RAG-mT5 自动改写引擎</h3>
+                <h3 className="text-xl font-serif text-ink tracking-tight">AI 整改建议引擎</h3>
                 <p className="text-xs text-ink-muted font-mono mt-1">审查详情: {clause?.id}</p>
               </div>
               <button 
@@ -254,7 +254,7 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                           </div>
                           <div className="text-xs text-ink-muted/70 space-y-1 text-center">
                             <p>正在检索相关法律条文...</p>
-                            <p>正在调用微调 mT5 模型生成建议...</p>
+                            <p>正在调用 AI 模型生成整改建议...</p>
                             <p className="text-[10px] opacity-50">请稍候，预计需要 3-5 秒</p>
                           </div>
                         </div>

@@ -189,11 +189,19 @@ export const api = {
     violations: Array<Record<string, unknown>>;
   }> => apiFetch(`/api/v1/projects/${id}`),
   
-  // 导出
-  exportReport: (projectId: string) => {
-    if (!API_BASE) {
-      console.warn('VITE_API_URL 未配置，可能无法导出');
+  // 导出 (fetch + blob 下载，自动携带 Authorization header)
+  exportReport: async (projectId: string) => {
+    const response = await apiFetch(`/api/v1/export/${projectId}`);
+    if (typeof response === 'string') {
+      const blob = new Blob([response], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report_${projectId}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
-    window.open(`${API_BASE}/api/v1/export/${projectId}?token=${localStorage.getItem('token')}`)
   }
 };

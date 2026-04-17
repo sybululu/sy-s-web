@@ -38,9 +38,16 @@ export default function Login({ onLogin, onSwitchToRegister, onShowToast }: Logi
       
       // 存储 token
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      const rawUser = data.user as Record<string, any>;
+      const normalizedUser: User = {
+        id: typeof rawUser.id === 'number' ? rawUser.id : parseInt(rawUser.id, 10),
+        email: rawUser.email || '',
+        username: rawUser.username || rawUser.name || '',
+        name: rawUser.name,
+      };
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
       
-      onLogin(data.token, data.user);
+      onLogin(data.token, normalizedUser);
       onShowToast?.('登录成功', 'success');
     } catch (error: any) {
       // ApiError 和普通 Error 都有 message 属性

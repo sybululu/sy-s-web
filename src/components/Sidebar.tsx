@@ -18,7 +18,7 @@ export default function Sidebar({ currentView, onViewChange, onLogout, currentUs
   ];
 
   // 获取用户显示名称
-  const displayName = currentUser?.name || currentUser?.email?.split('@')[0] || '用户';
+  const displayName = currentUser?.username || currentUser?.name || currentUser?.email?.split('@')[0] || '用户';
   const initials = displayName.slice(0, 2).toUpperCase();
 
   return (

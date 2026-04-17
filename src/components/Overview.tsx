@@ -1,5 +1,6 @@
 import { Upload, TrendingUp, ShieldAlert, CheckCircle2, AlertCircle, FileText, Activity, BarChart3, ArrowRight } from 'lucide-react';
 import { Project, ViewType } from '../types';
+import { RISK_LEVEL } from '../config/violation-config';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'motion/react';
 
@@ -53,9 +54,9 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
   const isHighRisk = currentProject.score < 60;
 
   // Calculate dynamic stats for current project
-  const highCount = currentProject.clauses.filter(c => c.riskLevel === 'high').length;
-  const mediumCount = currentProject.clauses.filter(c => c.riskLevel === 'medium').length;
-  const lowCount = currentProject.clauses.filter(c => c.riskLevel === 'low').length;
+  const highCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.HIGH || c.riskLevel === 'high').length;
+  const mediumCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.MEDIUM || c.riskLevel === 'medium').length;
+  const lowCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.LOW || c.riskLevel === 'low').length;
 
   // Calculate dynamic global stats
   const totalAudits = projects.length;

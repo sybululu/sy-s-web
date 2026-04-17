@@ -1,5 +1,6 @@
 import { FileText, Filter, Download, ArrowRight, ChevronLeft, ChevronRight, ShieldAlert, X } from 'lucide-react';
 import { Project, Clause } from '../types';
+import { VIOLATION_DETAILS, getRiskColorClass, getRiskDotClass } from '../config/violation-config';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -82,7 +83,7 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
   const filteredClauses = useMemo(() => {
     if (!filterCategory) return currentProject?.clauses || [];
     return (currentProject?.clauses || []).filter(clause => {
-      const clauseId = clause.category?.replace('I', 'I') || clause.categoryName;
+      const clauseId = String(clause.category)?.replace('I', 'I') || clause.categoryName;
       // 匹配类别ID或类别名称
       return clause.category === filterCategory || clause.categoryName?.includes(VIOLATION_CATEGORIES.find(c => c.id === filterCategory)?.name || '');
     });
@@ -233,14 +234,8 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
                       {clause.snippet}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${
-                        clause.riskLevel === 'high'
-                          ? 'bg-red-50 text-red-700 border-red-200'
-                          : clause.riskLevel === 'medium'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : 'bg-green-50 text-green-700 border-green-200'
-                      }`}>
-                        {clause.riskLevel === 'high' ? '高危' : clause.riskLevel === 'medium' ? '中度' : '低危'}
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${getRiskColorClass(clause.riskLevel || '')}`}>
+                        {clause.riskLevel === 'high' || clause.riskLevel === '高风险' ? '高危' : clause.riskLevel === 'medium' || clause.riskLevel === '中等风险' ? '中度' : '低危'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
