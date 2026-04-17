@@ -2,12 +2,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Sparkles, BookOpen, ThumbsUp, ThumbsDown, Edit3, Copy, Check } from 'lucide-react';
 import { Clause } from '../types';
 import { useState, useEffect } from 'react';
+import { diffWords, Change } from 'diff';
 
 interface DrawerProps {
   clause: Clause | null;
   isOpen: boolean;
   onClose: () => void;
-  onAdopt: () => void;
+  onAdopt: (updatedClause: Clause) => void;
   onShowToast?: (message: string, type?: 'success' | 'error') => void;
 }
 
@@ -38,7 +39,7 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
     setIsGenerating(true);
     try {
       const { api } = await import('../utils/api');
-      const res = await api.rectify(currentClause.originalText, currentClause.category);
+      const res = await api.rectify(currentClause.originalText, currentClause.category, currentClause.legalBasis);
       setEditedText(res.suggested_text);
       setLocalDiffHtml(`<span class="diff-add">${res.suggested_text}</span>`);
       setLocalLegalBasis(res.legal_basis);
@@ -69,6 +70,46 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
     setCopied(true);
     onShowToast?.('已复制到剪贴板');
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleAdoptClick = () => {
+    if (!clause) return;
+    
+    // 创建更新后的 clause 对象
+    const updatedClause: Clause = {
+      ...clause,
+      suggestedText: editedText,
+      diffSuggestedHtml: generateDiffHtml(clause.originalText, editedText),
+      legalBasis: localLegalBasis,
+    };
+    
+    onAdopt(updatedClause);
+  };
+
+  // 生成 diff HTML 用于对比显示
+  const generateDiffHtml = (original: string, suggested: string): string => {
+    const changes: Change[] = diffWords(original, suggested);
+    
+    return changes.map(change => {
+      if (change.added) {
+        return `<span class="diff-add">${escapeHtml(change.value)}</span>`;
+      }
+      if (change.removed) {
+        return `<span class="diff-remove">${escapeHtml(change.value)}</span>`;
+      }
+      return escapeHtml(change.value);
+    }).join('');
+  };
+
+  // HTML 转义函数
+  const escapeHtml = (text: string): string => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+      .replace(/\n/g, '<br/>');
   };
 
   return (
@@ -114,7 +155,7 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm font-medium text-ink">
                         <Sparkles className="w-4 h-4 text-[#d97757]" />
-                        代码级对比
+                        改写对比
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-ink-muted mr-2">模型反馈:</span>
@@ -135,30 +176,55 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-px bg-white/30 border border-white/40 rounded-lg overflow-hidden font-mono text-sm shadow-sm">
-                      <div className="glass-card flex flex-col border-0 rounded-none">
-                        <div className="bg-white/40 border-b border-white/30 px-4 py-2 text-xs font-medium text-slate-600 flex justify-between items-center">
-                          <span>原条款</span>
-                          <span className="text-slate-500">{clause.location}</span>
+                    {/* 侧边对比视图 */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="glass-card rounded-lg overflow-hidden">
+                        <div className="bg-red-50/60 px-4 py-2 border-b border-white/30">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-red-700">原始条款</span>
+                            <span className="text-[10px] text-red-600/70">{clause.location}</span>
+                          </div>
                         </div>
-                        <div className="flex flex-1">
-                          <div 
-                            className="p-4 bg-red-50/40 text-slate-800 leading-relaxed flex-1" 
-                            dangerouslySetInnerHTML={{ __html: clause.diffOriginalHtml }} 
-                          />
-                        </div>
-                      </div>
-                      <div className="glass-card flex flex-col border-0 rounded-none border-l border-white/30">
-                        <div className="bg-white/40 border-b border-white/30 px-4 py-2 text-xs font-medium text-slate-600 flex justify-between items-center">
-                          <span className="flex items-center gap-1.5 text-[#d97757]">mT5 建议条款</span>
-                        </div>
-                        <div className="flex flex-1">
-                          <div 
-                            className="p-4 bg-green-50/40 text-slate-900 leading-relaxed flex-1" 
-                            dangerouslySetInnerHTML={{ __html: localDiffHtml }} 
-                          />
+                        <div className="p-4">
+                          <p className="text-sm text-slate-700 leading-relaxed">
+                            {clause.originalText}
+                          </p>
                         </div>
                       </div>
+                      <div className="glass-card rounded-lg overflow-hidden border-[#d97757]/30">
+                        <div className="bg-[#d97757]/10 px-4 py-2 border-b border-white/30">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-[#d97757]">改写建议</span>
+                            {isGenerating ? (
+                              <span className="text-[10px] text-[#d97757]/70 animate-pulse">生成中...</span>
+                            ) : (
+                              <span className="text-[10px] text-[#d97757]/70">AI 生成</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          {isGenerating ? (
+                            <div className="space-y-2">
+                              <div className="h-4 bg-slate-200/50 rounded animate-pulse w-full"></div>
+                              <div className="h-4 bg-slate-200/50 rounded animate-pulse w-3/4"></div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: generateDiffHtml(clause.originalText, editedText) }} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* 图例说明 */}
+                    <div className="flex items-center gap-4 text-xs text-ink-muted">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded bg-green-500/20 border border-green-500/40"></span>
+                        新增内容
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded bg-red-500/20 border border-red-500/40"></span>
+                        删除内容
+                      </span>
                     </div>
                   </motion.div>
 
@@ -178,9 +244,19 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                     </div>
                     <div className="glass-input rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-ink focus-within:border-ink transition-all">
                       {isGenerating ? (
-                        <div className="flex items-center justify-center py-12 text-ink-muted text-sm">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-ink mr-3"></div>
-                          正在调用 mT5 模型生成整改建议...
+                        <div className="flex flex-col items-center justify-center py-12 text-ink-muted text-sm">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="relative">
+                              <div className="w-8 h-8 border-3 border-slate-200 rounded-full"></div>
+                              <div className="absolute inset-0 border-3 border-t-[#d97757] rounded-full animate-spin"></div>
+                            </div>
+                            <div className="text-ink font-medium">AI 正在生成整改建议</div>
+                          </div>
+                          <div className="text-xs text-ink-muted/70 space-y-1 text-center">
+                            <p>正在检索相关法律条文...</p>
+                            <p>正在调用微调 mT5 模型生成建议...</p>
+                            <p className="text-[10px] opacity-50">请稍候，预计需要 3-5 秒</p>
+                          </div>
                         </div>
                       ) : (
                         <textarea
@@ -204,9 +280,16 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                       合规依据
                     </div>
                     <div className="glass-card p-5 rounded-lg">
-                      <p className="text-sm text-ink-muted leading-relaxed font-serif">
-                        {localLegalBasis}
-                      </p>
+                      {isGenerating && !localLegalBasis ? (
+                        <div className="space-y-2">
+                          <div className="h-4 bg-slate-200/50 rounded animate-pulse w-3/4"></div>
+                          <div className="h-4 bg-slate-200/50 rounded animate-pulse w-1/2"></div>
+                        </div>
+                      ) : (
+                        <pre className="text-sm text-ink-muted leading-relaxed font-serif whitespace-pre-wrap">
+                          {localLegalBasis}
+                        </pre>
+                      )}
                     </div>
                   </motion.div>
                 </>
@@ -221,8 +304,9 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                 取消
               </button>
               <button 
-                onClick={onAdopt}
-                className="flex-1 py-2.5 bg-ink text-white font-medium text-sm rounded-md hover:bg-ink/90 transition-colors shadow-sm"
+                onClick={handleAdoptClick}
+                disabled={isGenerating}
+                className="flex-1 py-2.5 bg-ink text-white font-medium text-sm rounded-md hover:bg-ink/90 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 采纳并应用
               </button>

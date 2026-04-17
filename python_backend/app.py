@@ -356,11 +356,48 @@ async def rectify_snippet(
     # 使用 RAG 检索相关法律条款
     legal_context = get_legal_basis_from_rag(request.violation_type, context=request.original_snippet)
     
-    # 使用 mT5 生成整改建议
-    prompt = f"请根据以下合规规范，修改违规条款：\n规范：{legal_context}\n原条款：{request.original_snippet}\n修改后："
+    # 构建强化版 prompt，强制最小必要原则
+    violation_type_hints = {
+        "I1": "【重要】涉及收集个人信息，必须遵守最小必要原则，只能收集与服务直接相关的个人信息，禁止收集与服务无关的敏感信息。",
+        "I2": "【重要】必须明确说明每项个人信息收集的具体目的和用途，不能使用模糊表述。",
+        "I3": "【重要】涉及处理个人信息必须获得用户明确、知情、自愿的同意，不能捆绑授权。",
+        "I4": "【重要】收集范围不得超过实现处理目的的最小必要范围。",
+        "I5": "【重要】向第三方共享时必须明确说明接收方类型、共享目的、数据类型，禁止无限制共享。",
+        "I6": "【重要】向第三方提供个人信息必须单独取得用户明示同意。",
+        "I7": "【重要】必须明确说明第三方使用数据的目的和范围。",
+        "I8": "【重要】必须明确数据存储期限，期限届满应予以删除或匿名化。",
+        "I9": "【重要】必须说明数据销毁机制，承诺在约定保存期限届满后主动删除或匿名化处理。",
+        "I10": "【重要】必须明确列举用户享有的各项权利及行使方式。",
+        "I11": "【重要】必须提供便捷的渠道供用户行使权利，渠道必须易于发现和操作。",
+        "I12": "【重要】必须明确权利响应时限，承诺在法定期限内处理用户请求。",
+    }
+    
+    violation_hint = violation_type_hints.get(request.violation_type, "【重要】必须符合《个人信息保护法》相关要求。")
+    
+    # 强化版 prompt
+    prompt = f"""请将以下隐私政策条款改写为符合法律规范的版本。
+
+【法律依据】
+{legal_context}
+
+【整改要求】
+{violation_hint}
+
+【核心原则】
+1. 最小必要原则：只收集、处理实现目的所需的最小个人信息
+2. 目的明确原则：必须明确说明收集目的，不能模糊表述
+3. 知情同意原则：必须让用户充分知情并获得明确同意
+4. 权利保障原则：必须保障用户的查阅、复制、更正、删除等权利
+
+【原条款】
+{request.original_snippet}
+
+【合规改写】
+"""
+    
     inputs = tokenizer_mt5(prompt, return_tensors="pt", truncation=True, max_length=512)
     with torch.no_grad():
-        outputs = model_mt5.generate(**inputs, max_length=128)
+        outputs = model_mt5.generate(**inputs, max_length=256, temperature=0.3, do_sample=True)
     suggested_text = tokenizer_mt5.decode(outputs[0], skip_special_tokens=True)
     
     return {
@@ -460,6 +497,12 @@ async def export_report(
         report += f"\n{i}. {v.get('indicator', '未知类别')} (ID: {v.get('violation_id', 'N/A')})\n"
         report += f"   原文：{v.get('snippet', '未知')}\n"
         report += f"   依据：{v.get('legal_basis', '未知')}\n"
+        suggested = v.get('suggestedText', '')
+        if suggested:
+            report += f"   整改建议：{suggested}\n"
+        reason = v.get('reason', '')
+        if reason and reason != v.get('indicator', ''):
+            report += f"   说明：{reason}\n"
     
     return Response(
         content=report,

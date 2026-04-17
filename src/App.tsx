@@ -154,7 +154,19 @@ export default function App() {
     setIsDrawerOpen(true);
   };
 
-  const handleAdopt = () => {
+  const handleAdopt = (updatedClause: Clause) => {
+    if (!currentProject) return;
+    
+    // 更新 currentProject 中的对应 clause
+    const updatedClauses = currentProject.clauses.map(c => 
+      c.id === updatedClause.id ? updatedClause : c
+    );
+    
+    setCurrentProject({
+      ...currentProject,
+      clauses: updatedClauses,
+    });
+    
     showToast('整改方案已应用到当前草稿');
     setIsDrawerOpen(false);
   };
