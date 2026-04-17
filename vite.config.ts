@@ -15,9 +15,7 @@ export default defineConfig(({mode}) => {
         }
       }
     },
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-    },
+    define: {},
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -32,7 +30,7 @@ export default defineConfig(({mode}) => {
         ? undefined  // 已设置外部 API 地址，不启用代理
         : {
             '/api': {
-              target: 'http://localhost:8000',
+              target: 'http://localhost:7860',
               changeOrigin: true,
             },
           },
