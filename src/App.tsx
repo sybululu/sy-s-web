@@ -172,10 +172,10 @@ export default function App() {
     setIsDrawerOpen(false);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!currentProject) return;
     try {
-      api.exportReport(String(currentProject.id));
+      await api.exportReport(String(currentProject.id));
       showToast('合规报告导出成功');
     } catch (err) {
       showToast('导出失败', 'error');
