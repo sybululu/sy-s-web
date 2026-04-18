@@ -73,12 +73,16 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
     );
   }
 
-  // 根据筛选条件过滤数据
+  // 根据筛选条件过滤数据（支持聚合模式：匹配任一 violation）
   const filteredClauses = useMemo(() => {
     if (!filterCategory) return currentProject?.clauses || [];
     return (currentProject?.clauses || []).filter(clause => {
+      // 聚合模式：检查 violations 数组中是否包含目标类别
+      if (clause.violations?.length) {
+        return clause.violations.some(v => v.id === filterCategory);
+      }
+      // 兼容旧格式
       const clauseId = String(clause.category)?.replace('I', 'I') || clause.categoryName;
-      // 匹配类别ID或类别名称
       return clause.category === filterCategory || clause.categoryName?.includes(VIOLATION_CATEGORIES.find(c => c.id === filterCategory)?.name || '');
     });
   }, [currentProject?.clauses, filterCategory]);
@@ -213,35 +217,69 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
             </thead>
             <tbody className="divide-y divide-white/20">
               {currentData.length > 0 ? (
-                currentData.map((clause, index) => (
-                  <motion.tr 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    key={clause.id} 
-                    className="hover:bg-white/50 transition-colors group"
-                  >
-                    <td className="px-4 py-3 text-xs font-mono text-ink-muted">{clause.id}</td>
-                    <td className="px-4 py-3 text-xs text-ink-muted">{clause.location}</td>
-                    <td className="px-4 py-3 text-sm text-ink font-medium">{clause.categoryName || clause.category}</td>
-                    <td className="px-4 py-3 text-sm text-ink-muted truncate max-w-md" title={clause.snippet}>
-                      {clause.snippet}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${getRiskColorClass(clause.riskLevel || '')}`}>
-                        {clause.riskLevel === 'high' || clause.riskLevel === '高风险' ? '高危' : clause.riskLevel === 'medium' || clause.riskLevel === '中等风险' ? '中度' : '低危'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button 
-                        onClick={() => onOpenDrawer(clause)}
-                        className="text-ink hover:text-[#d97757] font-medium text-xs flex items-center gap-1 ml-auto transition-all cursor-pointer"
-                      >
-                        审查
-                      </button>
-                    </td>
-                  </motion.tr>
-                ))
+                currentData.map((clause, index) => {
+                  const vList = clause.violations || [];
+                  return (
+                    <motion.tr
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      key={clause.id}
+                      className="hover:bg-white/50 transition-colors group"
+                    >
+                      <td className="px-4 py-3 text-xs font-mono text-ink-muted">{clause.id}</td>
+                      <td className="px-4 py-3 text-xs text-ink-muted">{clause.location}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex flex-wrap gap-1.5">
+                          {vList.length > 0 ? vList.map((v) => (
+                            <span key={v.id} className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md border ${
+                              v.riskLevel === 'high' || v.riskLevel === '高风险'
+                                ? 'bg-red-50 text-red-700 border-red-200'
+                                : v.riskLevel === 'medium' || v.riskLevel === '中等风险'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-green-50 text-green-700 border-green-200'
+                            }`}>
+                              <span className="font-mono text-[10px] opacity-70">{v.id}</span>
+                              {v.name}
+                            </span>
+                          )) : (
+                            <span className="text-ink font-medium">{clause.categoryName || clause.category}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-ink-muted truncate max-w-md" title={clause.snippet}>
+                        {clause.snippet}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {(() => {
+                            // 去重：同一风险等级只显示一次
+                            const seen = new Set<string>();
+                            return vList.map((v) => {
+                              const label = v.riskLevel === 'high' || v.riskLevel === '高风险' ? '高危'
+                                : v.riskLevel === 'medium' || v.riskLevel === '中等风险' ? '中度' : '低危';
+                              if (seen.has(label)) return null;
+                              seen.add(label);
+                              return (
+                                <span key={v.id} className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${getRiskColorClass(v.riskLevel || '')}`}>
+                                  {label}
+                                </span>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => onOpenDrawer(clause)}
+                          className="text-ink hover:text-[#d97757] font-medium text-xs flex items-center gap-1 ml-auto transition-all cursor-pointer"
+                        >
+                          审查
+                        </button>
+                      </td>
+                    </motion.tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-ink-muted text-sm">

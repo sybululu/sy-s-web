@@ -200,7 +200,7 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
               <div className="flex items-center gap-4">
                 <div>
                   <h3 className="text-xl font-serif text-ink tracking-tight">
-                    {isSummary ? '用户解读' : 'AI 合规改写'}
+                    {isSummary ? '风险解读' : 'AI 合规改写'}
                   </h3>
                   <p className="text-xs text-ink-muted font-mono mt-1">审查详情: {clause?.id}</p>
                 </div>
@@ -218,7 +218,7 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                     }`}
                   >
                     <User className="w-3.5 h-3.5" />
-                    用户解读
+                    风险解读
                   </button>
                   <button
                     onClick={() => handleModeSwitch('rewrite')}
@@ -248,11 +248,39 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                   {/* 风险类别 */}
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                     <div className="text-xs font-medium text-ink-muted mb-2 uppercase tracking-widest">风险类别</div>
-                    <div className="text-lg font-serif text-ink">{clause.reason}</div>
+                    {clause.violations && clause.violations.length > 1 ? (
+                      <div className="space-y-2">
+                        {clause.violations.map((v) => (
+                          <div key={v.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/50 border border-white/30">
+                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold font-mono ${
+                              v.riskLevel === 'high' || v.riskLevel === '高风险'
+                                ? 'bg-red-100 text-red-700'
+                                : v.riskLevel === 'medium' || v.riskLevel === '中等风险'
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-green-100 text-green-700'
+                            }`}>
+                              {v.id}
+                            </span>
+                            <span className="text-sm font-medium text-ink">{v.name}</span>
+                            <span className={`ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded border ${
+                              v.riskLevel === 'high' || v.riskLevel === '高风险'
+                                ? 'bg-red-50 text-red-600 border-red-200'
+                                : v.riskLevel === 'medium' || v.riskLevel === '中等风险'
+                                  ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                  : 'bg-green-50 text-green-600 border-green-200'
+                            }`}>
+                              {v.confidence ? `${(v.confidence * 100).toFixed(1)}%` : ''}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-lg font-serif text-ink">{clause.reason}</div>
+                    )}
                     {/* 模式描述 */}
                     <p className="text-xs text-ink-muted mt-2 leading-relaxed">
                       {isSummary
-                        ? '用通俗语言解释这条条款对普通用户意味着什么，帮助理解潜在风险。'
+                        ? '分析条款本质与潜在风险，提供专业的合规解读。'
                         : '基于法律依据生成可直接用于隐私政策的专业合规文本。'
                       }
                     </p>
@@ -296,44 +324,40 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                     </div>
 
                     {isSummary ? (
-                      /* ========== 摘要模式布局：单栏解读 ========== */
-                      <div className="glass-card rounded-lg overflow-hidden">
-                        <div className="bg-blue-50/70 px-4 py-2 border-b border-white/30">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-blue-700">AI 通俗解读</span>
-                            {isGenerating ? (
-                              <span className="text-[10px] text-blue-600/70 animate-pulse">解读中...</span>
-                            ) : (
-                              <span className="text-[10px] text-blue-600/70">AI 生成</span>
-                            )}
+                      /* ========== 摘要模式：条款本质 + 风险分析 ========== */
+                      <div className="space-y-4">
+                        {/* 原文引用 */}
+                        <div className="glass-card rounded-lg overflow-hidden">
+                          <div className="bg-slate-50/80 px-4 py-2 border-b border-white/30">
+                            <span className="text-xs font-medium text-ink-muted uppercase tracking-wider">原始条款</span>
+                          </div>
+                          <div className="p-4">
+                            <p className="text-sm text-ink leading-relaxed">{clause.originalText}</p>
                           </div>
                         </div>
-                        <div className="p-5 space-y-4">
-                          {/* 原文引用 */}
-                          <div>
-                            <div className="text-[10px] font-medium text-ink-muted uppercase tracking-wider mb-1.5">原始条款</div>
-                            <div className="text-xs text-slate-500 leading-relaxed p-3 bg-slate-50/60 rounded-md border border-slate-100">
-                              {clause.originalText}
-                            </div>
-                          </div>
 
-                          {/* 解读内容 */}
-                          {isGenerating ? (
-                            <div className="space-y-2">
-                              <div className="h-4 bg-slate-200/50 rounded animate-pulse w-full"></div>
-                              <div className="h-4 bg-slate-200/50 rounded animate-pulse w-4/5"></div>
-                              <div className="h-4 bg-slate-200/50 rounded animate-pulse w-3/5"></div>
+                        {/* AI 解读内容 — 结构化渲染 */}
+                        {isGenerating ? (
+                          <div className="glass-card rounded-lg p-6 space-y-3">
+                            <div className="h-4 bg-slate-200/50 rounded animate-pulse w-full"></div>
+                            <div className="h-4 bg-slate-200/50 rounded animate-pulse w-4/5"></div>
+                            <div className="h-20 bg-slate-200/50 rounded animate-pulse w-full mt-4"></div>
+                          </div>
+                        ) : editedText ? (
+                          <div className="glass-card rounded-lg overflow-hidden">
+                            <div className="px-5 py-3 border-b border-white/30 flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-[#d97757]" />
+                              <span className="text-sm font-medium text-ink">合规风险解读</span>
+                              <span className="text-[10px] text-ink-muted ml-auto">AI 分析</span>
                             </div>
-                          ) : editedText ? (
-                            <div>
-                              <div className="text-[10px] font-medium text-ink-muted uppercase tracking-wider mb-1.5">解读内容</div>
+                            <div className="p-5 space-y-5">
                               <div
-                                className="text-sm text-ink leading-relaxed prose prose-sm"
+                                className="text-sm text-ink leading-relaxed space-y-4"
                                 dangerouslySetInnerHTML={{ __html: localDiffHtml }}
                               />
                             </div>
-                          ) : null}
-                        </div>
+                          </div>
+                        ) : null}
                       </div>
                     ) : (
                       /* ========== 改写模式布局：双栏对比 ========== */
