@@ -8,6 +8,7 @@ interface OverviewProps {
   currentProject: Project | null;
   projects: Project[];
   onViewChange: (view: ViewType) => void;
+  onRiskFilter?: (riskLevel: string) => void;
 }
 
 const containerVariants = {
@@ -25,7 +26,7 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
 };
 
-export default function Overview({ currentProject, projects, onViewChange }: OverviewProps) {
+export default function Overview({ currentProject, projects, onViewChange, onRiskFilter }: OverviewProps) {
   if (!currentProject) {
     return (
       <motion.div 
@@ -186,43 +187,45 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
               <Activity className="w-4 h-4" />
               当前风险分布
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-3 text-ink-muted">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#d97757]"></div>
-                  高危违规
-                </div>
-                <span className="font-mono text-ink">{highCount}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-3 text-ink-muted">
-                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-                  一般隐患
-                </div>
-                <span className="font-mono text-ink">{mediumCount}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-3 text-ink-muted">
-                  <div className="w-2.5 h-2.5 rounded-full bg-slate-300"></div>
-                  合规建议
-                </div>
-                <span className="font-mono text-ink">{lowCount}</span>
-              </div>
+            <div className="space-y-2">
+              {[
+                { label: '高危违规', count: highCount, color: 'bg-[#d97757]', dotColor: 'bg-[#d97757]', level: RISK_LEVEL.HIGH },
+                { label: '一般隐患', count: mediumCount, color: 'bg-amber-500', dotColor: 'bg-amber-500', level: RISK_LEVEL.MEDIUM },
+                { label: '合规建议', count: lowCount, color: 'bg-slate-300', dotColor: 'bg-slate-300', level: RISK_LEVEL.LOW },
+              ].map(({ label, count, dotColor, level }) => (
+                <button
+                  key={level}
+                  onClick={() => onRiskFilter?.(level)}
+                  disabled={count === 0}
+                  className={`w-full flex items-center justify-between text-sm px-3 py-2.5 rounded-lg transition-colors ${
+                    count > 0 ? 'hover:bg-slate-50 cursor-pointer' : 'opacity-40 cursor-default'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 text-ink-muted">
+                    <div className={`w-2.5 h-2.5 rounded-full ${dotColor}`}></div>
+                    <span>{label}</span>
+                  </div>
+                  <span className="font-mono text-ink">{count} 项</span>
+                </button>
+              ))}
             </div>
           </div>
-          <div className="pt-5 mt-5 border-t border-slate-100">
-            <div className="w-full bg-slate-100 rounded-full h-1.5 flex overflow-hidden">
-              {currentProject.clauses.length > 0 ? (
+          {currentProject.clauses.length > 0 && (
+            <div className="pt-4 mt-4 border-t border-slate-100">
+              <div
+                onClick={() => onRiskFilter?.('all')}
+                className="w-full bg-slate-100 rounded-full h-1.5 flex overflow-hidden cursor-pointer hover:bg-slate-200 transition-colors"
+                title="点击查看全部明细"
+              >
                 <>
                   <motion.div initial={{ width: 0 }} animate={{ width: `${(highCount / currentProject.clauses.length) * 100}%` }} transition={{ duration: 1 }} className="bg-[#d97757] h-full"></motion.div>
                   <motion.div initial={{ width: 0 }} animate={{ width: `${(mediumCount / currentProject.clauses.length) * 100}%` }} transition={{ duration: 1, delay: 0.2 }} className="bg-amber-500 h-full"></motion.div>
                   <motion.div initial={{ width: 0 }} animate={{ width: `${(lowCount / currentProject.clauses.length) * 100}%` }} transition={{ duration: 1, delay: 0.4 }} className="bg-slate-300 h-full"></motion.div>
                 </>
-              ) : (
-                <div className="w-full bg-green-500 h-full"></div>
-              )}
+              </div>
+              <p className="text-[11px] text-ink-muted text-center mt-2">点击进度条查看全部明细</p>
             </div>
-          </div>
+          )}
         </motion.div>
       </div>
 

@@ -8,6 +8,7 @@ interface DetailsProps {
   currentProject: Project | null;
   onOpenDrawer: (clause: Clause) => void;
   onDownload: () => void;
+  initialRiskFilter?: string | null;  // 从仪表盘传入的初始风险等级筛选
 }
 
 // 从统一配置生成筛选列表（与论文表 3-1 / 后端 INDICATORS 一致）
@@ -35,7 +36,7 @@ const itemVariants = {
   show: { opacity: 1, y: 0 }
 };
 
-export default function Details({ currentProject, onOpenDrawer, onDownload }: DetailsProps) {
+export default function Details({ currentProject, onOpenDrawer, onDownload, initialRiskFilter }: DetailsProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -53,6 +54,19 @@ export default function Details({ currentProject, onOpenDrawer, onDownload }: De
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // 当从仪表盘传入风险等级筛选时，自动匹配并设置筛选
+  useEffect(() => {
+    if (!initialRiskFilter) return;
+    if (initialRiskFilter === 'all') {
+      setFilterCategory(null);
+      return;
+    }
+    const riskKey = initialRiskFilter === RISK_LEVEL.HIGH ? 'high'
+      : initialRiskFilter === RISK_LEVEL.MEDIUM ? 'medium' : 'low';
+    const match = VIOLATION_CATEGORIES.find(c => c.risk === riskKey);
+    setFilterCategory(match?.id ?? null);
+  }, [initialRiskFilter]);
 
   if (!currentProject) {
     return (

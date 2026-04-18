@@ -105,8 +105,8 @@ import { getViolationName, getViolationWeight, getRiskLevel } from './config/vio
  */
 export function mapRawToClause(raw: Record<string, any>, index?: number): Clause {
   const categoryId = raw.violation_id ?? raw.category ?? 0;
-  // 优先使用后端返回的 weight，否则根据 violation_id 从权威配置中查找
-  const rawWeight = raw.weight ?? raw.probability;
+  // 优先使用后端返回的 weight，兼容 confidence/probability 等字段名
+  const rawWeight = raw.weight ?? raw.probability ?? raw.confidence;
   const weight = rawWeight ?? getViolationWeight(categoryId);
 
   return {

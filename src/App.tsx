@@ -31,6 +31,7 @@ export default function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState('');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [riskFilterFromOverview, setRiskFilterFromOverview] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // 取消分析函数
@@ -119,6 +120,9 @@ export default function App() {
 
   const handleViewChange = (view: ViewType) => {
     setCurrentView(view);
+    if (view !== 'details') {
+      setRiskFilterFromOverview(null);
+    }
   };
 
   const handleSelectProject = async (project: Project) => {
@@ -181,6 +185,11 @@ export default function App() {
       showToast('导出失败', 'error');
     }
   };
+
+  const handleRiskFilter = useCallback((riskLevel: string) => {
+    setRiskFilterFromOverview(riskLevel);
+    setCurrentView('details');
+  }, []);
 
   const handleStartAnalysis = async (type: string, value: any) => {
     if (!value) {
@@ -311,16 +320,17 @@ export default function App() {
               className="h-full"
             >
               {currentView === 'overview' && (
-                <Overview currentProject={displayProject} projects={projects} onViewChange={handleViewChange} />
+                <Overview currentProject={displayProject} projects={projects} onViewChange={handleViewChange} onRiskFilter={handleRiskFilter} />
               )}
               {currentView === 'new-task' && (
                 <NewTask onStartAnalysis={handleStartAnalysis} />
               )}
               {currentView === 'details' && (
-                <Details 
-                  currentProject={displayProject} 
-                  onOpenDrawer={handleOpenDrawer} 
-                  onDownload={handleDownload} 
+                <Details
+                  currentProject={displayProject}
+                  onOpenDrawer={handleOpenDrawer}
+                  onDownload={handleDownload}
+                  initialRiskFilter={riskFilterFromOverview}
                 />
               )}
               {currentView === 'history' && (
