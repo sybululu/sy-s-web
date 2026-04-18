@@ -60,7 +60,8 @@ export interface Clause {
   probability?: number;       // 模型预测概率
   riskLevel?: string;         // 风险等级（高/中/低）
   location: string;           // 条款位置/来源
-  legalBasis: string;         // 法律依据 (RAG 检索结果)
+  legalBasis: string;         // 法律依据引用（如"《个人信息保护法》第28条"）
+  legalDetail?: string;      // 法律依据完整条文正文（RAG 检索结果）
   diffOriginalHtml?: string;  // 原文 diff HTML
   diffSuggestedHtml?: string; // 改写对比 HTML
   isAdopted?: boolean;        // 是否已被采纳
@@ -110,6 +111,7 @@ export function mapRawToClause(raw: Record<string, any>, index?: number): Clause
     riskLevel: raw.risk_level ?? getRiskLevel(weight),
     location: raw.location ?? `第${(index ?? 0) + 1}节`,
     legalBasis: raw.legal_basis ?? raw.legalBasis ?? '',
+    legalDetail: raw.legal_detail ?? raw.legalDetail ?? undefined,
     diffOriginalHtml: raw.diff_original_html ?? raw.diffOriginalHtml ?? raw.snippet ?? '',
     diffSuggestedHtml: raw.diff_suggested_html ?? raw.diffSuggestedHtml ?? `<span class="diff-add">${raw.suggestedText || raw.suggested_text || '建议修改'}</span>`,
     isAdopted: false,

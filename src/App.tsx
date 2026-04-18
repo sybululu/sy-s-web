@@ -144,17 +144,30 @@ export default function App() {
 
   const handleAdopt = (updatedClause: Clause) => {
     if (!currentProject) return;
-    
+
     // 更新 currentProject 中的对应 clause
-    const updatedClauses = currentProject.clauses.map(c => 
+    const updatedClauses = currentProject.clauses.map(c =>
       c.id === updatedClause.id ? updatedClause : c
     );
-    
-    setCurrentProject({
+
+    const updatedProject: Project = {
       ...currentProject,
       clauses: updatedClauses,
+    };
+    setCurrentProject(updatedProject);
+
+    // 回写后端：将采纳后的条款（含 suggested_text）同步到数据库，导出时可用
+    api.updateProject(String(currentProject.id), updatedClauses.map(c => ({
+      indicator: c.categoryName || c.reason,
+      violation_id: String(c.category),
+      snippet: c.originalText,
+      legal_basis: c.legalBasis,
+      legal_detail: c.legalDetail || '',
+      suggested_text: c.suggestedText && c.suggestedText !== '【系统建议】请根据合规要求修改。' ? c.suggestedText : '',
+    }))).catch(err => {
+      console.error('Failed to sync adopted clause to backend:', err);
     });
-    
+
     showToast('整改方案已应用到当前草稿');
     setIsDrawerOpen(false);
   };

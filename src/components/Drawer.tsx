@@ -21,31 +21,36 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
   const [isGenerating, setIsGenerating] = useState(false);
   const [localDiffHtml, setLocalDiffHtml] = useState('');
   const [localLegalBasis, setLocalLegalBasis] = useState('');
+  const [localLegalDetail, setLocalLegalDetail] = useState('');
   const [mode, setMode] = useState<RectifyMode>('rewrite');
-  // 记录每种模式已生成过的结果，避免重复调用
-  const [generatedCache, setGeneratedCache] = useState<Record<RectifyMode, { text: string; legal: string; diff: string }>>({} as any);
+  // 记录每种模式+条款 已生成过的结果，避免重复调用（key: `${mode}_${clauseId}`）
+  const [generatedCache, setGeneratedCache] = useState<Record<string, { text: string; legal: string; diff: string }>>({} as any);
 
   // 切换模式时，恢复缓存或触发新生成
   useEffect(() => {
     if (!clause) return;
 
-    const cached = generatedCache[mode];
+    const cacheKey = `${mode}_${clause.id || clause.originalText?.slice(0, 30)}`;
+    const cached = generatedCache[cacheKey];
     if (cached) {
       // 有缓存则直接恢复
       setEditedText(cached.text);
       setLocalDiffHtml(cached.diff);
       setLocalLegalBasis(cached.legal);
+      setLocalLegalDetail(cached.detail || '');
     } else {
       // 无缓存：如果是 rewrite 模式且 clause 有默认建议文本，先用默认值
       if (mode === 'rewrite' && clause.suggestedText && clause.suggestedText !== '【系统建议】请根据合规要求修改。') {
         setEditedText(clause.suggestedText);
         setLocalDiffHtml(clause.diffSuggestedHtml || '');
         setLocalLegalBasis(clause.legalBasis || '');
+        setLocalLegalDetail(clause.legalDetail || '');
       } else {
         // 否则清空等待生成
         setEditedText('');
         setLocalDiffHtml('');
         setLocalLegalBasis(clause.legalBasis || '');
+        setLocalLegalDetail(clause.legalDetail || '');
         // 自动触发生成
         generateSuggestion(clause, mode);
       }
@@ -55,8 +60,9 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
   }, [clause, mode]);
 
   const generateSuggestion = useCallback(async (currentClause: Clause, targetMode: RectifyMode) => {
+    const cacheKey = `${targetMode}_${currentClause.id || currentClause.originalText?.slice(0, 30)}`;
     // 防止重复生成
-    if (generatedCache[targetMode]) return;
+    if (generatedCache[cacheKey]) return;
 
     setIsGenerating(true);
     try {
@@ -76,11 +82,12 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
       setEditedText(text);
       setLocalDiffHtml(diffHtml);
       setLocalLegalBasis(res.legal_basis);
+      setLocalLegalDetail(res.legal_detail || '');
 
       // 写入缓存
       setGeneratedCache(prev => ({
         ...prev,
-        [targetMode]: { text, legal: res.legal_basis, diff: diffHtml },
+        [cacheKey]: { text, legal: res.legal_basis, detail: res.legal_detail || '', diff: diffHtml },
       }));
 
       // 同步到 clause 对象（rewrite 模式才同步）
@@ -104,10 +111,11 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
 
   const handleRegenerate = () => {
     if (!clause) return;
-    // 清除当前模式缓存，强制重新生成
+    // 清除当前模式+条款缓存，强制重新生成
+    const cacheKey = `${mode}_${clause.id || clause.originalText?.slice(0, 30)}`;
     setGeneratedCache(prev => {
       const next = { ...prev };
-      delete next[mode];
+      delete next[cacheKey];
       return next;
     });
     generateSuggestion(clause, mode);
@@ -137,6 +145,7 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
       suggestedText: editedText,
       diffSuggestedHtml: generateDiffHtml(clause.originalText, editedText),
       legalBasis: localLegalBasis,
+      legalDetail: localLegalDetail || undefined,
     };
 
     onAdopt(updatedClause);
@@ -449,6 +458,14 @@ export default function Drawer({ clause, isOpen, onClose, onAdopt, onShowToast }
                       ) : (
                         <pre className="text-sm text-ink-muted leading-relaxed font-serif whitespace-pre-wrap">
                           {localLegalBasis}
+                          {localLegalDetail ? (
+                            <>
+                              {'\n'}
+                              {'─'.repeat(40)}
+                              {'\n'}
+                              {localLegalDetail}
+                            </>
+                          ) : null}
                         </pre>
                       )}
                     </div>

@@ -162,7 +162,7 @@ export const api = {
     violation_type: string,
     legal_basis?: string,
     mode?: 'summary' | 'rewrite'
-  ): Promise<{ suggested_text: string; legal_basis: string; mode: string }> =>
+  ): Promise<{ suggested_text: string; legal_basis: string; legal_detail: string; mode: string }> =>
     apiFetch('/api/v1/rectify', {
       method: 'POST',
       body: JSON.stringify({ original_snippet, violation_type, legal_basis, mode: mode || 'rewrite' })
@@ -193,20 +193,31 @@ export const api = {
     risk_level: string;
     violations: Array<Record<string, unknown>>;
   }> => apiFetch(`/api/v1/projects/${id}`),
+
+  updateProject: (id: string, violations: Array<Record<string, unknown>>): Promise<{ message: string; id: string }> =>
+    apiFetch(`/api/v1/projects/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ violations })
+    }),
   
-  // 导出 (fetch + blob 下载，自动携带 Authorization header)
+  // 导出 (直接 fetch + blob 下载，绕过 apiFetch 的 JSON 解析)
   exportReport: async (projectId: string) => {
-    const response = await apiFetch(`/api/v1/export/${projectId}`);
-    if (typeof response === 'string') {
-      const blob = new Blob([response], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `report_${projectId}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE}/api/v1/export/${projectId}`, { headers });
+    if (!response.ok) throw new Error(`导出失败 (${response.status})`);
+
+    const text = await response.text();
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `report_${projectId}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 };
