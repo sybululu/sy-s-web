@@ -1,6 +1,6 @@
 # 隐私政策合规审查系统 — 完整工作流与接口文档
 
-> **版本**: v2.0（审查修复版）
+> **版本**: v2.1（含逐句分类明细）
 > **更新日期**: 2026-04-18
 > **技术栈**: React 19 + TypeScript + Vite (前端) | FastAPI + SQLite + PyTorch (后端)
 
@@ -261,17 +261,24 @@ POST /api/v1/auth/login
 │                                                                 │
 │  [3.2] 逐句 RoBERTa 分类 (核心推理)                              │
 │    for sentence in sentences:                                    │
-│      inputs = tokenizer(sentence, truncation=150, max_length=150)│
-│      outputs = model_roberta(**inputs)  # CustomBertMoeModel    │
-│      logits = outputs.squeeze()  # [11] 维度                    │
-│      probs = sigmoid(logits).tolist()  # 11类概率               │
-│      confidence = logits[0] - logits[1]  # 最高-次高差值        │
-│      detected_ids = map_to_12_classes(probs, confidence)        │
-│      # mapper.py: 11类idx → 多标签12类 violation ID            │
-│      # 例: idx=0 → ["I1","I4"] / idx=2 → ["I5","I6","I7"]    │
+│      pred = roberta_predict(sentence)  # 返回完整分类明细字典     │
+│      # pred 结构:                                                │
+│      #   {                                                        │
+│      #     "mapped": {"I1": 0.82, "I4": 0.82},  # 映射后的违规ID│
+│      #     "raw_probs": [0.12, 0.85, ...],    # 11类原始概率     │
+│      #     "max_class_idx": 1,                  # 最高类别索引    │
+│      #     "max_prob": 0.8523,                   # 最高类别概率   │
+│      #     "confidence": 3.42,                   # 置信度差值    │
+│      #     "class_name": "权限获取",              # 类别中文名    │
+│      #   }                                                        │
+│      #                                                           │
+│      # 同时记录到 sentence_results (逐句分类明细)                 │
+│      sentence_results.append({ index, sentence, class_name,      │
+│        max_class_idx, max_prob, confidence, raw_probs,           │
+│        detected_violations })                                    │
 │                                                                 │
 │  [3.3] 违规去重 + RAG 法律检索                                   │
-│    for violation_id, prob in probs.items():                     │
+│    for violation_id, prob in pred["mapped"].items():             │
 │      if prob > 0.5:                                             │
 │        violation_flags[violation_id] = 1  # 每种违规只扣一次   │
 │        if not exists in violations_list:                       │
@@ -279,9 +286,10 @@ POST /api/v1/auth/login
 │          violations_list.append({                              │
 │            indicator: "过度收集敏感数据",  # ID_TO_INDICATOR    │
 │            violation_id: "I1",                                 │
-│            sentence: "原始条款文本...",                          │
+│            snippet: "原始条款文本...",                          │
 │            legal_basis: rag_legal.reference,  # "《个保法》第28条"│
 │            legal_detail: rag_legal.content,  # 条文完整正文      │
+│            confidence: round(prob, 4),       # 分类置信度(新增) │
 │          })                                                    │
 │                                                                 │
 │  [3.4] 评分计算                                                  │
@@ -358,6 +366,34 @@ POST /api/v1/auth/login
   idx=10 "停止运营"    ──→ ["I9"](销毁机制)   ← 与idx=5合并
 
 覆盖检查: I1✅ I2✅ I3✅ I4✅ I5✅ I6✅ I7✅ I8✅ I9✅ I10✅ I11✅ I12✅
+```
+
+### 4.3 逐句分类明细 `sentence_results`（★ 新增）
+
+analyze 接口返回中包含 `sentence_results` 数组，每条被分割的句子对应一条记录，**类似测试集推理输出**，方便后端调试和模型效果分析。
+
+```
+sentence_results 结构:
+┌────────────────┬───────────────────────────────────────────────┐
+│ 字段            │ 说明                                          │
+├────────────────┼───────────────────────────────────────────────┤
+│ index          │ 句子在原文中的序号（从1开始）                   │
+│ sentence       │ 原始句子文本                                   │
+│ class_name     │ RoBERTa 判定的原始类别中文名（11类之一）        │
+│ max_class_idx  │ 最高概率类别索引（0~10，对应 CLASS_NAMES）      │
+│ max_prob       │ 最高类别 sigmoid 概率值（0~1）                 │
+│ confidence     │ 置信度差值（logits[最高] - logits[次高]），    │
+│                │ 值越大说明模型越确信                            │
+│ raw_probs      │ 11 类完整概率分布数组（与 CLASS_NAMES 一一对应）│
+│ detected_violations │ 映射后的违规 ID 列表，如 ["I1","I4"]   │
+│                │ 空列表 [] 表示该句未触发任何违规               │
+└────────────────┴───────────────────────────────────────────────┘
+
+CLASS_NAMES 索引对照表:
+  idx=0 "数据收集"  idx=4 "存储方式"   idx=8  "联系方式"
+  idx=1 "权限获取"  idx=5 "安全销毁"   idx=9  "政策变更"
+  idx=2 "共享转让"  idx=6 "特殊人群"   idx=10 "停止运营"
+  idx=3 "使用目的"  idx=7 "权限管理"
 ```
 
 ---
@@ -760,14 +796,39 @@ GET /api/v1/export/{project_id}
       "violation_id": "I1",
       "snippet": "本公司可能收集您的位置信息、设备信息...",
       "legal_basis": "《个人信息保护法》第六条'最小必要'原则及第二十九条",
-      "legal_detail": "处理个人信息应当具有合法、正当、明确目的..."  // RAG条文正文
+      "legal_detail": "处理个人信息应当具有合法、正当、明确目的...",  // RAG条文正文
+      "confidence": 0.8234                                          // 分类置信度(新增)
     },
     {
       "indicator": "未获得明示同意",
       "violation_id": "I3",
       "snippet": "使用本服务即表示您同意我们收集上述信息...",
       "legal_basis": "《个人信息保护法》第十四条",
-      "legal_detail": "基于个人同意处理个人信息的，该同意应当由个人在充分知情的前提下..."
+      "legal_detail": "基于个人同意处理个人信息的，该同意应当由个人在充分知情的前提下...",
+      "confidence": 0.7812
+    }
+  ],
+  "sentence_results": [                                            // ★ 新增: 逐句分类明细
+    {
+      "index": 1,
+      "sentence": "本公司可能收集您的位置信息、设备信息等。",
+      "class_name": "数据收集",                                     // RoBERTa 11类原始类别
+      "max_class_idx": 0,                                         // 最高概率类别索引(0~10)
+      "max_prob": 0.8523,                                         // 最高类别概率
+      "confidence": 3.42,                                         // logits最高-次高差值
+      "raw_probs": [0.12, 0.85, 0.03, 0.08, 0.02, 0.01, 0.00,   // 11类完整概率分布
+                   0.05, 0.01, 0.00, 0.01],
+      "detected_violations": ["I1", "I4"]                         // 映射到的违规ID列表
+    },
+    {
+      "index": 2,
+      "sentence": "使用本服务即表示您同意我们收集上述信息。",
+      "class_name": "权限获取",
+      "max_class_idx": 1,
+      "max_prob": 0.7812,
+      "confidence": 2.15,
+      "raw_probs": [0.05, 0.78, 0.08, 0.12, 0.02, ...],
+      "detected_violations": ["I3"]
     }
   ]
 }
@@ -919,6 +980,7 @@ GET /api/v1/export/{project_id}
 | *(无)* | `location` | `string` | `'第{n}节'` |
 | `legal_basis` | `legalBasis` | `string` | `''` |
 | **`legal_detail`** | **`legalDetail`** | `string \| undefined` | **`undefined`** ★新增 |
+| **`confidence`** | **`confidence`** | **`number`** | **`undefined`** ★逐句分类置信度 |
 | *(无)* | `isAdopted` | `boolean` | `false` |
 | *(无)* | `diffOriginalHtml` | `string` | snippet |
 | *(无)* | `diffSuggestedHtml` | `string` | `<span class="diff-add">suggestedText</span>` |
@@ -1057,10 +1119,10 @@ Layer 3: 前端容错
 | 文件 | 变更类型 | 变更内容 |
 |------|----------|----------|
 | `sy-s-web/src/utils/api.ts` | 修改 | rectify 返回类型加 `legal_detail`；新增 `updateProject`；`exportReport` 改原生 fetch |
-| `sy-s-web/src/types.ts` | 修改 | Clause 接口加 `legalDetail?`；`mapRawToClause` 映射 `legal_detail` |
+| `sy-s-web/src/types.ts` | 修改 | Clause 接口加 `legalDetail?` + `confidence?`；`mapRawToClause` 映射 `legal_detail` + `confidence` |
 | `sy-s-web/src/components/Drawer.tsx` | 修改 | 新增 `localLegalDetail` state；缓存存取 detail；展示区域渲染法律条文正文；采纳带 legalDetail |
 | `sy-s-web/src/App.tsx` | 修改 | `handleAdopt` 新增 `api.updateProject` 回写后端 |
-| `sy-s-web-backend/app.py` | 修改 | 新增 `PUT /api/v1/projects/{id}` 接口；`GITHUB_TOKEN` 空值校验；删除重复 `BertModel` 导入 |
+| `sy-s-web-backend/app.py` | 修改 | 新增 `PUT /api/v1/projects/{id}` 接口；`GITHUB_TOKEN` 空值校验；删除重复 `BertModel` 导入；**roberta_predict 升级为返回完整分类明细字典**；**analyze 新增 `sentence_results` 逐句分类输出**；violations 条目恢复 `confidence` 字段；新增 `CLASS_NAMES` 常量；恢复逐句 logger.info 日志 |
 | `sy-s-web-backend/violation_config.py` | 修改 | 删除 ~120 行死代码（未启用的 Prompt 模板） |
 
 ## 附录 B: 已知限制与未来优化方向
