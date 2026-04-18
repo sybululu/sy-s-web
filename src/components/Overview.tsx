@@ -1,4 +1,4 @@
-import { Upload, TrendingUp, ShieldAlert, CheckCircle2, AlertCircle, FileText, Activity, BarChart3, ArrowRight } from 'lucide-react';
+import { Upload, TrendingUp, ShieldAlert, CheckCircle2, AlertCircle, FileText, Activity, BarChart3, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Project, ViewType } from '../types';
 import { RISK_LEVEL, SCORE_THRESHOLDS } from '../config/violation-config';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -53,6 +53,14 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
 
   // 使用官方阈值（与后端 app.py / violation-config.ts SCORE_THRESHOLDS 对齐）
   const isHighRisk = currentProject.score < SCORE_THRESHOLDS.HIGH_RISK;
+  const isMediumRisk = currentProject.score >= SCORE_THRESHOLDS.HIGH_RISK && currentProject.score < SCORE_THRESHOLDS.LOW_RISK;
+
+  // 风险等级三色映射
+  const riskBadgeClass = isHighRisk
+    ? 'bg-red-50 text-red-700 border-red-200'
+    : isMediumRisk
+      ? 'bg-amber-50 text-amber-700 border-amber-200'
+      : 'bg-green-50 text-green-700 border-green-200';
 
   // Calculate dynamic stats for current project（riskLevel 已由 mapRawToClause 统一归一化为中文）
   const highCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.HIGH).length;
@@ -125,7 +133,7 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
                 initial={{ strokeDashoffset: 351.86 }}
                 animate={{ strokeDashoffset: 351.86 * (1 - currentProject.score / 100) }}
                 transition={{ duration: 1.5, ease: "easeOut" }}
-                className={isHighRisk ? 'text-[#d97757]' : 'text-ink'}
+                className={isHighRisk ? 'text-[#d97757]' : isMediumRisk ? 'text-amber-500' : 'text-ink'}
                 cx="64" cy="64" fill="transparent" r="56" stroke="currentColor"
                 strokeDasharray="351.86"
                 strokeWidth="8"
@@ -142,20 +150,24 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
               <h3 className="text-xl font-serif text-ink">
                 {currentProject.name}
               </h3>
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-md border ${
-                isHighRisk ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'
-              }`}>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-md border ${riskBadgeClass}`}>
                 {currentProject.riskStatus}
               </span>
             </div>
             <p className="text-sm text-ink-muted leading-relaxed mb-5 max-w-xl">
-              {isHighRisk 
+              {isHighRisk
                 ? '当前检测到多项违反《个保法》及《App违法违规收集使用个人信息行为认定方法》的核心条款，建议立即整改。'
-                : '当前隐私政策合规性良好，未发现严重违规项，建议定期进行合规性复查以保持健康度。'}
+                : isMediumRisk
+                  ? '当前存在部分合规风险项，建议对照法律要求进行针对性修改。'
+                  : '当前隐私政策合规性良好，未发现严重违规项，建议定期进行合规性复查以保持健康度。'}
             </p>
             <div className="flex gap-4">
               <div className="bg-surface-alt border border-slate-200 text-ink px-4 py-2 rounded-md flex items-center gap-2">
-                {isHighRisk ? <ShieldAlert className="w-4 h-4 text-[#d97757]" /> : <CheckCircle2 className="w-4 h-4 text-green-600" />}
+                {isHighRisk
+                  ? <ShieldAlert className="w-4 h-4 text-[#d97757]" />
+                  : isMediumRisk
+                    ? <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    : <CheckCircle2 className="w-4 h-4 text-green-600" />}
                 <span className="text-sm font-medium">{currentProject.clauses.length} 项待修复</span>
               </div>
               <button 
