@@ -242,7 +242,7 @@ export default function Details({ currentProject, onOpenDrawer, onDownload, init
                       className="hover:bg-white/50 transition-colors group"
                     >
                       <td className="px-4 py-3 text-xs font-mono text-ink-muted">{clause.id}</td>
-                      <td className="px-4 py-3 text-xs text-ink-muted">{clause.location}</td>
+                      <td className="px-4 py-3 text-xs font-mono text-ink-muted">{index + 1}</td>
                       <td className="px-4 py-3 text-sm">
                         <div className="flex flex-wrap gap-1.5">
                           {vList.length > 0 ? vList.map((v) => (

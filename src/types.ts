@@ -129,8 +129,8 @@ export function mapRawToClause(raw: Record<string, any>, index?: number): Clause
   };
 }
 
-/** 风险等级优先级（用于聚合时取最高） */
-const RISK_PRIORITY: Record<string, number> = { 'high': 3, 'medium': 2, 'low': 1 };
+/** 风险等级优先级（用于聚合时取最高）— 必须与 getRiskLevel() 返回值一致 */
+const RISK_PRIORITY: Record<string, number> = { '高风险': 3, '中等风险': 2, '低风险': 1 };
 
 /**
  * 批量映射后端 clauses 数组
@@ -164,9 +164,9 @@ export function mapRawToClauses(rawClauses: Record<string, any>[]): Clause[] {
       };
     });
 
-    // 取最高风险等级
+    // 取最高风险等级（RISK_PRIORITY key 与 getRiskLevel 返回值一致）
     const highestRisk = violations.reduce((best, v) =>
-      (RISK_PRIORITY[v.riskLevel] || 0) > (RISK_PRIORITY[best] || 0) ? v.riskLevel : best, 'low');
+      (RISK_PRIORITY[v.riskLevel] || 0) > (RISK_PRIORITY[best] || 0) ? v.riskLevel : best, '低风险');
 
     // 取最高概率/权重
     const maxProb = Math.max(...violations.map(v => v.confidence));

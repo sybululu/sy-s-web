@@ -3,22 +3,6 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 // 请求超时时间（毫秒）
 const REQUEST_TIMEOUT = 60000;
 
-// 创建带超时的 fetch
-async function fetchWithTimeout(url: string, options: RequestInit, timeout: number = REQUEST_TIMEOUT): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
 function getAuthHeaders(isFormData: boolean = false) {
   const token = localStorage.getItem('token');
   const headers: Record<string, string> = {};

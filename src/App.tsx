@@ -220,8 +220,9 @@ export default function App() {
       setAnalysisStep('正在生成审查报告与整改建议...');
       
       // Map Python backend response to frontend Project structure
+      // 后端返回的 id 格式为 "p{uuid12}" (如 "p1a2b3c4d5e6f")，保持字符串不转换
       const newProject: Project = {
-        id: typeof result.id === 'string' ? parseInt(result.id, 10) : (result.id as number),
+        id: result.id as any,  // 后端 id 为字符串格式 p{hex}，不做 parseInt 避免 NaN
         name: result.name,
         date: new Date().toISOString().split('T')[0],
         description: `自动化合规审查报告。共发现 ${result.violations.length} 项潜在风险。`,
