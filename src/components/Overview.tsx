@@ -67,10 +67,19 @@ export default function Overview({ currentProject, projects, onViewChange }: Ove
     : '0.0';
 
   // Calculate top risk categories for current project
+  // 按每个独立违规类型统计（遍历每条 clause 的 violations 数组）
   const categoryCounts = currentProject.clauses.reduce((acc, clause) => {
-    // 使用 categoryName（中文名）进行统计，如果不存在则使用 category
-    const catKey = clause.categoryName || clause.category;
-    acc[catKey] = (acc[catKey] || 0) + 1;
+    // 聚合模式：clause.violations 包含该句触发的所有违规明细
+    if (clause.violations && clause.violations.length > 0) {
+      for (const v of clause.violations) {
+        const catKey = v.name || v.id;
+        acc[catKey] = (acc[catKey] || 0) + 1;
+      }
+    } else {
+      // 兜底：无 violations 数组时用 categoryName
+      const catKey = clause.categoryName || clause.category;
+      acc[catKey] = (acc[catKey] || 0) + 1;
+    }
     return acc;
   }, {} as Record<string, number>);
   
