@@ -1,7 +1,8 @@
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-// 请求超时时间（毫秒）
+// 请求超时时间（毫秒）— 默认60s，LLM接口用更长超时
 const REQUEST_TIMEOUT = 60000;
+const LLM_REQUEST_TIMEOUT = 180000;  // LLM 接口（rectify/analyze）3分钟
 
 function getAuthHeaders(isFormData: boolean = false) {
   const token = localStorage.getItem('token');
@@ -38,12 +39,13 @@ function handleNetworkError(error: unknown): never {
   throw new ApiError('发生未知网络错误', undefined, 'UNKNOWN');
 }
 
-export async function apiFetch(endpoint: string, options: RequestInit = {}, externalSignal?: AbortSignal): Promise<any> {
+export async function apiFetch(endpoint: string, options: RequestInit = {}, externalSignal?: AbortSignal, timeout?: number): Promise<any> {
   const isFormData = options.body instanceof FormData;
-  
+  const effectiveTimeout = timeout ?? REQUEST_TIMEOUT;
+
   // 创建内部的 AbortController
   const internalController = new AbortController();
-  const timeoutId = setTimeout(() => internalController.abort(), REQUEST_TIMEOUT);
+  const timeoutId = setTimeout(() => internalController.abort(), effectiveTimeout);
   
   // 合并信号：如果外部信号中止，内部信号也中止
   const abortHandler = () => internalController.abort();
@@ -128,7 +130,7 @@ export const api = {
       body: JSON.stringify({ email, password, name })
     }),
 
-  // 分析
+  // 分析（含模型推理+RAG检索，可能较慢）
   analyze: (text: string, source_type: string = 'text', signal?: AbortSignal): Promise<{
     id: string;
     name: string;
@@ -139,8 +141,9 @@ export const api = {
     apiFetch('/api/v1/analyze', {
       method: 'POST',
       body: JSON.stringify({ text, source_type })
-    }, signal),
-    
+    }, signal, LLM_REQUEST_TIMEOUT),
+
+  // 整改建议（调用 Phi-4 LLM 生成，需要更长超时）
   rectify: (
     original_snippet: string,
     violation_type: string,
@@ -150,7 +153,7 @@ export const api = {
     apiFetch('/api/v1/rectify', {
       method: 'POST',
       body: JSON.stringify({ original_snippet, violation_type, legal_basis, mode: mode || 'rewrite' })
-    }),
+    }, undefined, LLM_REQUEST_TIMEOUT),
 
   uploadFile: (file: File): Promise<{ text: string }> => {
     const formData = new FormData();
