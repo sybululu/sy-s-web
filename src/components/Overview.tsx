@@ -9,6 +9,7 @@ interface OverviewProps {
   projects: Project[];
   onViewChange: (view: ViewType) => void;
   onRiskFilter?: (riskLevel: string) => void;
+  isLoading?: boolean;
 }
 
 const containerVariants = {
@@ -26,7 +27,23 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
 };
 
-export default function Overview({ currentProject, projects, onViewChange, onRiskFilter }: OverviewProps) {
+export default function Overview({ currentProject, projects, onViewChange, onRiskFilter, isLoading }: OverviewProps) {
+  // Loading 状态：正在加载审查历史
+  if (isLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+        className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center"
+      >
+        <div className="w-16 h-16 border-4 border-slate-200 border-t-ink rounded-full animate-spin mb-6" />
+        <h3 className="text-lg font-serif text-ink tracking-tight mb-2">加载审查历史</h3>
+        <p className="text-sm text-ink-muted">正在获取您的合规审查数据...</p>
+      </motion.div>
+    );
+  }
+
   if (!currentProject) {
     return (
       <motion.div 
@@ -63,10 +80,26 @@ export default function Overview({ currentProject, projects, onViewChange, onRis
       ? 'bg-amber-50 text-amber-700 border-amber-200'
       : 'bg-green-50 text-green-700 border-green-200';
 
-  // Calculate dynamic stats for current project（riskLevel 已由 mapRawToClause 统一归一化为中文）
-  const highCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.HIGH).length;
-  const mediumCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.MEDIUM).length;
-  const lowCount = currentProject.clauses.filter(c => c.riskLevel === RISK_LEVEL.LOW).length;
+  // Calculate dynamic stats for current project
+  // 遍历每条 clause 的 violations 数组，逐条统计各风险级别（一条 clause 可能触发多种不同级别的违规）
+  let highCount = 0, mediumCount = 0, lowCount = 0;
+  currentProject.clauses.forEach(c => {
+    if (c.violations && c.violations.length > 0) {
+      for (const v of c.violations) {
+        if (v.riskLevel === RISK_LEVEL.HIGH) highCount++;
+        else if (v.riskLevel === RISK_LEVEL.MEDIUM) mediumCount++;
+        else lowCount++;
+      }
+    } else {
+      // 兜底：无 violations 数组时使用 clause 级别的 riskLevel
+      if (c.riskLevel === RISK_LEVEL.HIGH) highCount++;
+      else if (c.riskLevel === RISK_LEVEL.MEDIUM) mediumCount++;
+      else lowCount++;
+    }
+  });
+
+  // 总违规数（用于进度条百分比计算，= 各级之和）
+  const totalRiskCount = highCount + mediumCount + lowCount;
 
   // Calculate dynamic global stats
   const totalAudits = projects.length;
@@ -210,7 +243,7 @@ export default function Overview({ currentProject, projects, onViewChange, onRis
               ))}
             </div>
           </div>
-          {currentProject.clauses.length > 0 && (
+          {totalRiskCount > 0 && (
             <div className="pt-4 mt-4 border-t border-slate-100">
               <div
                 onClick={() => onRiskFilter?.('all')}
@@ -218,9 +251,9 @@ export default function Overview({ currentProject, projects, onViewChange, onRis
                 title="点击查看全部明细"
               >
                 <>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${(highCount / currentProject.clauses.length) * 100}%` }} transition={{ duration: 1 }} className="bg-[#d97757] h-full"></motion.div>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${(mediumCount / currentProject.clauses.length) * 100}%` }} transition={{ duration: 1, delay: 0.2 }} className="bg-amber-500 h-full"></motion.div>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${(lowCount / currentProject.clauses.length) * 100}%` }} transition={{ duration: 1, delay: 0.4 }} className="bg-slate-300 h-full"></motion.div>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${(highCount / totalRiskCount) * 100}%` }} transition={{ duration: 1 }} className="bg-[#d97757] h-full"></motion.div>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${(mediumCount / totalRiskCount) * 100}%` }} transition={{ duration: 1, delay: 0.2 }} className="bg-amber-500 h-full"></motion.div>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${(lowCount / totalRiskCount) * 100}%` }} transition={{ duration: 1, delay: 0.4 }} className="bg-slate-300 h-full"></motion.div>
                 </>
               </div>
               <p className="text-[11px] text-ink-muted text-center mt-2">点击进度条查看全部明细</p>

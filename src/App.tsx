@@ -59,14 +59,15 @@ function AuthPage({
   onBack: () => void;
 }) {
   return (
-    <div className="hero-marketing min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50 px-4">
-      <div className="w-full max-w-md relative">
+    <div className="hero-marketing min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-md relative z-10">
         {/* 返回按钮 */}
         <button
           onClick={onBack}
-          className="absolute -top-12 left-0 text-sm text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1"
+          className="group absolute -top-14 left-0 text-sm text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-1.5 font-medium"
         >
-          ← 返回首页
+          <span className="group-hover:-translate-x-1 transition-transform">←</span>
+          返回首页
         </button>
 
         {isRegistering ? (
@@ -103,6 +104,7 @@ export default function App() {
   const [analysisStep, setAnalysisStep] = useState('');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [riskFilterFromOverview, setRiskFilterFromOverview] = useState<string | null>(null);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // 取消分析函数
@@ -152,6 +154,7 @@ export default function App() {
 
   useEffect(() => {
     if (isLoggedIn) {
+      setIsLoadingProjects(true);
       api.getProjects()
         .then(data => {
           if (Array.isArray(data)) {
@@ -180,7 +183,8 @@ export default function App() {
           if (err.code !== 'UNAUTHORIZED') {
             showToast(err.message || '无法连接到后端服务，请检查 API 地址配置', 'error');
           }
-        });
+        })
+        .finally(() => setIsLoadingProjects(false));
     }
   }, [isLoggedIn]);
 
@@ -415,7 +419,7 @@ export default function App() {
               className="h-full"
             >
               {currentView === 'overview' && (
-                <Overview currentProject={displayProject} projects={projects} onViewChange={handleViewChange} onRiskFilter={handleRiskFilter} />
+                <Overview currentProject={displayProject} projects={projects} onViewChange={handleViewChange} onRiskFilter={handleRiskFilter} isLoading={isLoadingProjects} />
               )}
               {currentView === 'new-task' && (
                 <NewTask onStartAnalysis={handleStartAnalysis} />
