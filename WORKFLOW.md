@@ -102,10 +102,112 @@
 | **向量检索** | FAISS (IndexFlatIP + 余弦相似度) | 141 条法律语义检索 |
 | **生成模型** | Phi-4 Mini Instruct (GitHub Models API) | 整改建议 |
 | **认证** | JWT (HS256) + bcrypt 密码哈希 | 无状态 Token |
+| **路由** | react-router-dom (BrowserRouter) | 单项目双模式 |
+| **营销站动效** | GSAP + Three.js (OGL) + Motion | ColorBends/Threads/LineWaves/Stack/Folder/ScrollFloat |
 
----
+### 1.3 双模式路由实现细节
 
-## 2. 核心数据模型
+#### 入口文件 (`main.tsx`)
+
+```tsx
+<BrowserRouter>    // ← 必须包裹，否则 Hero 的 <Link> 会 useContext null 崩溃
+  <App />
+</BrowserRouter>
+```
+
+#### App.tsx 核心逻辑
+
+```tsx
+// 未登录 → 营销站（Hero Navbar + Landing + Footer + 登录弹窗 overlay）
+if (!isLoggedIn) {
+  return (
+    <div className="hero-marketing min-h-screen">
+      <Navbar />       // 滚动隐藏导航栏（含"立即体验"按钮）
+      <Landing />      // 营销首页（ColorBends波浪背景 + FlipCard + 合规数据演示）
+      <Footer />       // 页脚
+      {/* 登录/注册弹窗 */}
+      {showAuthModal && (
+        <Login onLogin={handleLogin} />
+        // 或 <Register onRegister={...} />
+      )}
+    </div>
+  );
+}
+
+// 已登录 → B 端产品（原封不动）
+return (
+  <div className="flex h-screen">
+    <Sidebar ... />
+    <main><Header ... /><Overview/NewTask/Details/History /></main>
+    <Drawer ... />
+  </div>
+);
+```
+
+#### CTA 按钮事件拦截机制
+
+Hero 组件（Landing.tsx / Navbar.tsx）中的"立即体验"/"立即开始使用"按钮**不需要修改**，通过全局事件拦截桥接到 B 端登录：
+
+```tsx
+useEffect(() => {
+  if (isLoggedIn) return;
+  const handleExperienceClick = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') &&
+      (target.textContent?.includes('立即体验') || target.textContent?.includes('立即开始使用'))
+    ) {
+      e.preventDefault();
+      setShowAuthModal(true);   // 弹出 B 端登录框
+      setIsRegistering(false);
+    }
+  };
+  document.addEventListener('click', handleExperienceClick, true);
+  return () => document.removeEventListener('click', handleExperienceClick, true);
+}, [isLoggedIn]);
+```
+
+**设计优势**：Hero 组件保持独立可复用，不耦合 B 端业务逻辑。
+
+### 1.4 前端目录结构（更新后）
+
+```
+src/
+├── main.tsx                    # 入口（BrowserRouter 包裹）
+├── App.tsx                     # 双模式路由分发
+├── index.css                   # 合并样式（B端 + Hero）
+│
+├── components/
+│   ├── B端组件（已登录时使用）:
+│   │   ├── Sidebar.tsx         # 左侧导航
+│   │   ├── Header.tsx          # 顶部标题栏
+│   │   ├── Overview.tsx        # 总览仪表盘
+│   │   ├── NewTask.tsx         # 新建审查任务
+│   │   ├── Details.tsx         # 违规条款明细
+│   │   ├── History.tsx         # 历史报告
+│   │   ├── Drawer.tsx          # 整改侧边面板
+│   │   ├── Login.tsx           # 登录（overlay 弹窗形式）
+│   │   └── Register.tsx        # 注册
+│   │
+│   └── Hero 营销站组件（未登录时使用）:
+│       ├── Navbar.tsx          # 导航栏（滚动隐藏 + toast 提示）
+│       ├── Footer.tsx          # 页脚
+│       ├── Threads.tsx         # OGL 线条动效
+│       ├── Folder.tsx          # 文件夹展开动效
+│       ├── Stack.tsx           # 卡片堆叠拖拽
+│       ├── ColorBends.tsx      # Three.js 波浪背景
+│       ├── ScrollFloat.tsx     # GSAP 滚动文字浮动
+│       └── LineWaves.tsx       # OGL 波浪线动效
+│
+├── pages/                      # Hero 页面
+│   ├── Landing.tsx             # 营销首页（792行，含 InteractiveFlipCard/complianceData/Stack演示）
+│   ├── Pricing.tsx             # 定价页（4档含政企信创版）
+│   └── Dashboard.tsx           # 仪表盘展示页
+│
+├── types.ts                    # 类型定义
+├── config/                     # 配置文件
+└── utils/api.ts                # API 请求层
+```
 
 ### 2.1 后端违规指标体系 (`violation_config.py`) — 唯一权威数据源
 
