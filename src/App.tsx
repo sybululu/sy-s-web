@@ -22,9 +22,15 @@ import Pricing from './pages/Pricing';
 import MarketingNavbar from './components/marketing/MarketingNavbar';
 import MarketingFooter from './components/marketing/MarketingFooter';
 
+// Hero 营销站组件
+import Navbar from './components/Navbar';
+import Landing from './pages/Landing';
+import Footer from './components/Footer';
+
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentView, setCurrentView] = useState<ViewType>('overview');
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
@@ -51,6 +57,25 @@ export default function App() {
     setIsAnalyzing(false);
     setAnalysisStep('');
   }, []);
+
+  // 未登录时：Hook Hero 营销站的"立即体验"/"立即开始使用"按钮 → 打开登录弹窗
+  useEffect(() => {
+    if (isLoggedIn) return;
+    const handleExperienceClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest('button') &&
+        (target.textContent?.includes('立即体验') || target.textContent?.includes('立即开始使用'))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowAuthModal(true);
+        setIsRegistering(false);
+      }
+    };
+    document.addEventListener('click', handleExperienceClick, true);
+    return () => document.removeEventListener('click', handleExperienceClick, true);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     // 检查本地是否已有 token
@@ -283,22 +308,55 @@ export default function App() {
     }
     // 用户点了CTA，展示登录/注册页
     return (
-      <>
-        {isRegistering ? (
-          <Register 
-            onRegister={(token, user) => { handleLogin(token, user); setIsRegistering(false); }} 
-            onSwitchToLogin={() => setIsRegistering(false)} 
-            onShowToast={showToast}
-          />
-        ) : (
-          <Login 
-            onLogin={handleLogin} 
-            onSwitchToRegister={() => setIsRegistering(true)}
-            onShowToast={showToast}
-          />
-        )}
+      <div className="hero-marketing min-h-screen">
+        <Navbar />
+        <Landing />
+        <Footer />
+
+        {/* B端登录/注册弹窗（由 Hero 的"立即体验"按钮触发） */}
+        <AnimatePresence>
+          {showAuthModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowAuthModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {isRegistering ? (
+                  <Register
+                    onRegister={(token, user) => {
+                      handleLogin(token, user);
+                      setShowAuthModal(false);
+                      setIsRegistering(false);
+                    }}
+                    onSwitchToLogin={() => setIsRegistering(false)}
+                    onShowToast={showToast}
+                  />
+                ) : (
+                  <Login
+                    onLogin={(token, user) => {
+                      handleLogin(token, user);
+                      setShowAuthModal(false);
+                    }}
+                    onSwitchToRegister={() => setIsRegistering(true)}
+                    onShowToast={showToast}
+                  />
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <Toast toast={toast} />
-      </>
+      </div>
     );
   }
 
