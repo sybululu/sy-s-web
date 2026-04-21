@@ -17,6 +17,10 @@ import Login from './components/Login';
 import Register from './components/Register';
 import { api } from './utils/api';
 import { AnimatePresence, motion } from 'motion/react';
+import Landing from './pages/Landing';
+import Pricing from './pages/Pricing';
+import MarketingNavbar from './components/marketing/MarketingNavbar';
+import MarketingFooter from './components/marketing/MarketingFooter';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -33,6 +37,10 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [riskFilterFromOverview, setRiskFilterFromOverview] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 营销站状态：未登录时默认展示营销站，点CTA后切换到登录页
+  const [showMarketing, setShowMarketing] = useState(true);
+  const [marketingPage, setMarketingPage] = useState<'landing' | 'pricing'>('landing');
 
   // 取消分析函数
   const cancelAnalysis = useCallback(() => {
@@ -252,7 +260,28 @@ export default function App() {
     }
   };
 
+  // 未登录：默认展示营销站，点CTA后切换到登录/注册页
   if (!isLoggedIn) {
+    if (showMarketing) {
+      return (
+        <div className="min-h-screen flex flex-col font-sans bg-white">
+          <MarketingNavbar
+            onGetStarted={() => setShowMarketing(false)}
+            currentPage={marketingPage}
+            onPageChange={setMarketingPage}
+          />
+          <main className="flex-1">
+            {marketingPage === 'landing' ? (
+              <Landing onGetStarted={() => setShowMarketing(false)} />
+            ) : (
+              <Pricing onGetStarted={() => setShowMarketing(false)} />
+            )}
+          </main>
+          <MarketingFooter />
+        </div>
+      );
+    }
+    // 用户点了CTA，展示登录/注册页
     return (
       <>
         {isRegistering ? (
