@@ -431,7 +431,7 @@ export default function Landing() {
 
           {/* Heading */}
           <h1 className="font-geist font-medium tracking-tighter text-5xl md:text-[72px] leading-[1.05] text-center text-slate-900 flex flex-col items-center">
-            <div className="overflow-hidden pb-2">
+            <div className="overflow-hidden py-1">
               <motion.div
                 initial={{ y: "100%", rotate: 4 }}
                 animate={{ y: 0, rotate: 0 }}
@@ -441,7 +441,7 @@ export default function Landing() {
                 智能高效的 <span className="font-serif italic text-6xl md:text-[84px] font-normal text-slate-800 pr-2">隐私政策</span>
               </motion.div>
             </div>
-            <div className="overflow-hidden pb-2">
+            <div className="overflow-hidden py-1">
               <motion.div
                 initial={{ y: "100%", rotate: 4 }}
                 animate={{ y: 0, rotate: 0 }}
