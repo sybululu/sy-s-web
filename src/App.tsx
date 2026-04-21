@@ -161,8 +161,10 @@ export default function App() {
               clauses: []
             }));
             setProjects(mappedProjects);
+            // 仅设置当前项目基础信息，留在 overview 不自动跳 details
+            // （details 页面的 clauses 延迟到用户点击"查看明细"时按需加载）
             if (mappedProjects.length > 0) {
-              handleSelectProject(mappedProjects[0]);
+              setCurrentProject(mappedProjects[0]);
             }
           } else {
             console.error('Expected array from API, got:', data);
@@ -209,7 +211,15 @@ export default function App() {
     }
   };
 
-  const handleSelectProject = async (project: Project) => {
+  // 切换到 details 视图时，按需加载 clauses（登录时只设了基础信息）
+  useEffect(() => {
+    if (currentView === 'details' && currentProject && (!currentProject.clauses || currentProject.clauses.length === 0)) {
+      loadProjectDetails(currentProject);
+    }
+  }, [currentView]);
+
+  // 仅加载项目详情（clauses），不改变当前视图
+  const loadProjectDetails = async (project: Project) => {
     try {
       const detail = await api.getProject(String(project.id));
       const fullProject: Project = {
@@ -219,8 +229,12 @@ export default function App() {
       setCurrentProject(fullProject);
     } catch (err) {
       console.error('Failed to fetch project details:', err);
-      setCurrentProject(project);
     }
+  };
+
+  // 加载详情 + 跳转到 details 页面
+  const handleSelectProject = async (project: Project) => {
+    await loadProjectDetails(project);
     setCurrentView('details');
   };
 
