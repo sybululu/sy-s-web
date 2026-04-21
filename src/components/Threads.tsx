@@ -120,16 +120,9 @@ void main() {
 }
 `;
 
-const Threads = ({ color = [1, 1, 1], amplitude = 1, distance = 0, enableMouseInteraction = false, className = "", ...rest }: {
-  color?: number[];
-  amplitude?: number;
-  distance?: number;
-  enableMouseInteraction?: boolean;
-  className?: string;
-  [key: string]: any;
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const animationFrameId = useRef<number | null>(null);
+const Threads = ({ color = [1, 1, 1], amplitude = 1, distance = 0, enableMouseInteraction = false, className = "", ...rest }) => {
+  const containerRef = useRef(null);
+  const animationFrameId = useRef();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -173,7 +166,7 @@ const Threads = ({ color = [1, 1, 1], amplitude = 1, distance = 0, enableMouseIn
     let currentMouse = [0.5, 0.5];
     let targetMouse = [0.5, 0.5];
 
-    function handleMouseMove(e: MouseEvent) {
+    function handleMouseMove(e) {
       const rect = container.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width;
       const y = 1.0 - (e.clientY - rect.top) / rect.height;
@@ -187,7 +180,7 @@ const Threads = ({ color = [1, 1, 1], amplitude = 1, distance = 0, enableMouseIn
       container.addEventListener('mouseleave', handleMouseLeave);
     }
 
-    function update(t: number) {
+    function update(t) {
       if (enableMouseInteraction) {
         const smoothing = 0.05;
         currentMouse[0] += smoothing * (targetMouse[0] - currentMouse[0]);

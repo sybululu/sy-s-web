@@ -7,6 +7,7 @@ interface CardRotateProps {
   onSendToBack: () => void;
   sensitivity: number;
   disableDrag?: boolean;
+  key?: string | number;
 }
 
 function CardRotate({ children, onSendToBack, sensitivity, disableDrag = false }: CardRotateProps) {
@@ -15,7 +16,7 @@ function CardRotate({ children, onSendToBack, sensitivity, disableDrag = false }
   const rotateX = useTransform(y, [-100, 100], [60, -60]);
   const rotateY = useTransform(x, [-100, 100], [-60, 60]);
 
-  function handleDragEnd(_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
+  function handleDragEnd(_: any, info: PanInfo) {
     if (Math.abs(info.offset.x) > sensitivity || Math.abs(info.offset.y) > sensitivity) {
       onSendToBack();
     } else {
@@ -50,7 +51,7 @@ function CardRotate({ children, onSendToBack, sensitivity, disableDrag = false }
 export interface StackProps {
   randomRotation?: boolean;
   sensitivity?: number;
-  cards?: any[];
+  cards?: ReactNode[];
   animationConfig?: { stiffness: number; damping: number };
   sendToBackOnClick?: boolean;
   autoplay?: boolean;
@@ -136,6 +137,7 @@ export default function Stack({
         
         return (
           <CardRotate
+            key={card.id}
             onSendToBack={() => sendToBack(card.id)}
             sensitivity={sensitivity}
             disableDrag={shouldDisableDrag}

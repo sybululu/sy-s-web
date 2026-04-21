@@ -1,4 +1,5 @@
-import { motion, useScroll, useTransform } from 'motion/react';
+import React, { useState, useRef } from 'react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
 import { 
   ShieldCheck, 
   Globe, 
@@ -8,8 +9,134 @@ import {
   BrainCircuit, 
   FileText, 
   CheckCircle2,
-  Star
+  XCircle,
+  ArrowDown,
+  Share2,
+  Clock,
+  UserCheck,
+  ChevronRight,
+  ArrowRight
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import ScrollFloat from '../components/ScrollFloat';
+import Folder from '../components/Folder';
+import Threads from '../components/Threads';
+import ColorBends from '../components/ColorBends';
+import Stack from '../components/Stack';
+
+function MagneticButton({ children, className, onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const handleMouse = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const { clientX, clientY } = e;
+    const { height, width, left, top } = ref.current!.getBoundingClientRect();
+    const middleX = clientX - (left + width / 2);
+    const middleY = clientY - (top + height / 2);
+    setPosition({ x: middleX * 0.3, y: middleY * 0.3 });
+  };
+
+  const reset = () => {
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const { x, y } = position;
+  return (
+    <motion.button
+      ref={ref}
+      onMouseMove={handleMouse}
+      onMouseLeave={reset}
+      animate={{ x, y }}
+      transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
+      className={className}
+      onClick={onClick}
+    >
+      {children}
+    </motion.button>
+  );
+}
+
+function ScrollUnfold({ children, className = "" }: { children: React.ReactNode, className?: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, rotateX: -90, y: 50, transformPerspective: 1000, transformOrigin: "top" }}
+      whileInView={{ opacity: 1, rotateX: 0, y: 0 }}
+      viewport={{ once: false, margin: "-20%" }}
+      transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function ScrollSlide({ children, className = "", direction = "left" }: { children: React.ReactNode, className?: string, direction?: "left" | "right" }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: direction === "left" ? -150 : 150 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: false, margin: "-10%" }}
+      transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function ScrollFlip({ children, className = "", delay = 0 }: { children: React.ReactNode, className?: string, delay?: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, rotateY: 90, transformPerspective: 1000 }}
+      whileInView={{ opacity: 1, rotateY: 0 }}
+      viewport={{ once: false, margin: "-20%" }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function InteractiveFlipCard({ frontIcon: Icon, frontTitle, frontDesc, backContent, delay = 0, className = "" }: { frontIcon: any, frontTitle: string, frontDesc: string, backContent: React.ReactNode, delay?: number, className?: string }) {
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  return (
+    <ScrollFlip delay={delay} className={`relative h-[340px] cursor-pointer group perspective-[1000px] ${className}`}>
+      <motion.div
+        className="w-full h-full relative [transform-style:preserve-3d] transition-shadow duration-300"
+        animate={{ rotateY: isFlipped ? 180 : 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+        onClick={() => setIsFlipped(!isFlipped)}
+      >
+        {/* Front */}
+        <div className="absolute inset-0 [backface-visibility:hidden] bg-gradient-to-br from-slate-50/80 to-slate-200/50 backdrop-blur-3xl border border-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.08)] p-8 rounded-[2rem] flex flex-col justify-center space-y-6 hover:from-slate-100/80 hover:to-slate-200/60 transition-colors">
+          <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-800">
+            <Icon className="w-7 h-7" />
+          </div>
+          <h3 className="font-bold text-xl text-slate-900">{frontTitle}</h3>
+          <p className="text-sm text-slate-700 leading-relaxed font-medium">{frontDesc}</p>
+          <div className="absolute bottom-6 right-6 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+            <span className="text-xs font-mono font-bold tracking-widest uppercase">Click to flip</span>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+          </div>
+        </div>
+
+        {/* Back */}
+        <div className="absolute inset-0 [backface-visibility:hidden] bg-slate-900 border border-slate-800 shadow-xl p-8 rounded-[2rem] flex flex-col justify-center text-white [transform:rotateY(180deg)]">
+          <h3 className="font-bold text-xl mb-4">{frontTitle} - 详情</h3>
+          <div className="text-sm text-slate-300 leading-relaxed font-medium">
+            {backContent}
+          </div>
+          <div className="absolute bottom-6 right-6 text-slate-400 flex items-center gap-1">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" /></svg>
+            <span className="text-xs font-mono font-bold tracking-widest uppercase">Back</span>
+          </div>
+        </div>
+      </motion.div>
+    </ScrollFlip>
+  );
+}
 
 function ScrollReveal({ children, className = "", delay = 0 }: { children: React.ReactNode, className?: string, delay?: number }) {
   return (
@@ -25,262 +152,533 @@ function ScrollReveal({ children, className = "", delay = 0 }: { children: React
   );
 }
 
-interface LandingProps {
-  onGetStarted: () => void;
-}
+const complianceData = [
+  {
+    id: 'collection',
+    title: '数据收集',
+    count: 4,
+    icon: Database,
+    items: [
+      { name: '过度收集敏感数据', desc: '是否收集与服务无关的生物识别、金融账户、医疗健康、未成年人等敏感个人信息', law: '《个人信息保护法》第六条"最小必要"原则' },
+      { name: '未说明收集目的', desc: '是否清晰、具体披露每项数据收集的实际用途，是否存在"为未来业务拓展"等模糊表述', law: '《个人信息保护法》第十七条信息披露要求' },
+      { name: '未获得明示同意', desc: '是否通过默认勾选、捆绑服务等方式变相强制授权，未以显著方式获取用户明确同意', law: '《个人信息保护法》第十四条明示同意要求' },
+      { name: '收集范围超出服务需求', desc: '是否收集与产品/服务核心功能无直接关联的非敏感个人信息', law: '《个人信息保护法》第六条数据收集必要性要求' }
+    ]
+  },
+  {
+    id: 'sharing',
+    title: '数据共享',
+    count: 3,
+    icon: Share2,
+    items: [
+      { name: '未明确第三方共享范围', desc: '是否未披露向第三方共享的个人信息具体类型、数量及使用场景', law: '《个人信息保护法》第二十三条共享信息披露要求' },
+      { name: '未获得单独共享授权', desc: '是否在共享用户信息前未取得用户单独同意，仅以整体隐私政策同意替代', law: '《个人信息保护法》第二十三条单独同意要求' },
+      { name: '未明确共享数据用途', desc: '是否未向用户告知第三方使用共享数据的具体目的，存在用途模糊/扩大情形', law: '《个人信息保护法》第二十三条' }
+    ]
+  },
+  {
+    id: 'retention',
+    title: '数据留存',
+    count: 2,
+    icon: Clock,
+    items: [
+      { name: '未明确留存期限', desc: '是否未披露数据留存的具体时长，或留存期限与服务目的实现不匹配', law: '《个人信息保护法》第十九条' },
+      { name: '未说明数据销毁机制', desc: '是否未明确留存期限届满后，数据销毁/匿名化的具体方式、流程及责任主体', law: '《个人信息保护法》第四十七条数据删除要求' }
+    ]
+  },
+  {
+    id: 'rights',
+    title: '用户权利保障',
+    count: 3,
+    icon: UserCheck,
+    items: [
+      { name: '未明确用户权利范围', desc: '是否未完整告知用户查询、更正、删除、撤回同意、解释说明等法定权利', law: '《个人信息保护法》第四十四条至第四十八条用户权利相关规定' },
+      { name: '未提供便捷权利行使途径', desc: '是否未设置在线申请、客服对接等简易渠道，存在繁琐流程阻碍用户行使权利', law: '《个人信息保护法》第五十条权利行使便捷性要求' },
+      { name: '未明确权利响应时限', desc: '是否未披露收到用户权利行使申请后，完成处理并反馈结果的具体时限', law: '《个人信息保护法》相关规定' }
+    ]
+  }
+];
 
-export default function Landing({ onGetStarted }: LandingProps) {
-  const { scrollY } = useScroll();
-  const heroY = useTransform(scrollY, [0, 800], [0, 150]);
-  const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
+const MOCK_CLAUSES = [
+  {
+    id: "I1",
+    name: "过度收集敏感数据",
+    original: "本公司可能收集您的位置信息、设备信息、联系人信息等。",
+    rewrite: "为实现服务目的，我们仅收集必要信息：位置信息——仅限导航功能使用。您可随时在「设置」中关闭授权，关闭后不会影响核心业务。",
+    summaryOutline: "这条条款收集了定位和通讯录，却没有告诉你具体用途，明显范围超标。",
+    summaryDetail: [
+      { q: "实际在做什么？", a: "像你进店买水，店员却强行抄走了你手机的家庭住址。" },
+      { q: "影响？", a: "你的核心敏感隐私被不合理获取，存在泄露风险。" },
+      { q: "合规版该长啥样？", a: "必须只针对特定需求说明“收集什么、用在哪”。" }
+    ],
+    colors: { icon: "text-rose-500", bg: "bg-rose-50/50", border: "border-rose-100" }
+  },
+  {
+    id: "I3",
+    name: "未获得明示同意",
+    original: "使用本服务或浏览本网站，即表示您无条件同意我们收集并处理上述所有个人信息。",
+    rewrite: "在收集您的个人信息前，我们将通过弹窗等显著方式告知您处理目的及范围，并在获取您的明示同意后收集。您有权拒绝提供。",
+    summaryOutline: "强行绑定同意，只要用App就视为交出所有隐私，属于典型霸王条款。",
+    summaryDetail: [
+      { q: "实际在做什么？", a: "你在App啥也没点，系统就默认你全权授权了。" },
+      { q: "影响？", a: "完全剥夺了你的知情同意权。" },
+      { q: "合规版该长啥样？", a: "必须弹出明确选项，由你本人主动点击“同意”才算数。" }
+    ],
+    colors: { icon: "text-amber-500", bg: "bg-amber-50/50", border: "border-amber-100" }
+  },
+  {
+    id: "I8",
+    name: "未明确留存期限",
+    original: "我们将长期保存您的服务日志和实名认证数据，以优化产品体验。",
+    rewrite: "我们仅在实现服务目的所必需的最短时间内保存您的个人信息。超出法定期限后，我们将依法对数据进行删除或匿名化处理。",
+    summaryOutline: "声称“长期保存”却不说存多久，违反了数据最小化保留原则。",
+    summaryDetail: [
+      { q: "实际在做什么？", a: "注销账号后，他们可能还在服务器存着你的脸和身份证。" },
+      { q: "影响？", a: "被黑客攻击时，你的陈年旧账数据就会惨遭泄露。" },
+      { q: "合规版该长啥样？", a: "必须说清楚具体留存时间和逾期销毁机制。" }
+    ],
+    colors: { icon: "text-purple-500", bg: "bg-purple-50/50", border: "border-purple-100" }
+  }
+];
+
+function DemoClauseCard({ clause }: { clause: typeof MOCK_CLAUSES[0]; key?: string | number }) {
+  const [demoMode, setDemoMode] = useState<"summary" | "rewrite">("rewrite");
 
   return (
-    <div className="min-h-screen bg-white selection:bg-indigo-100 selection:text-indigo-900 relative">
+    <div className="w-full h-[600px] bg-slate-50/95 backdrop-blur-[40px] border border-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.08)] flex flex-col pointer-events-auto rounded-[2rem] overflow-hidden">
+      {/* Header */}
+      <div className="bg-white/40 px-5 py-4 border-b border-white/40 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2">
+            <div className="w-3.5 h-3.5 rounded-full bg-rose-400"></div>
+            <div className="w-3.5 h-3.5 rounded-full bg-amber-400"></div>
+            <div className="w-3.5 h-3.5 rounded-full bg-emerald-400"></div>
+          </div>
+          <span className="text-xs font-mono text-slate-500 ml-3 tracking-wider hidden sm:inline-block">条款整改视图</span>
+        </div>
+        <div className="flex gap-2" onPointerDown={(e) => e.stopPropagation()}>
+          <button 
+            onClick={() => setDemoMode("summary")}
+            className={`px-3 py-1.5 rounded-md text-[10px] font-bold tracking-wider transition-all duration-300 ${demoMode === "summary" ? "bg-slate-800 text-white shadow-md shadow-slate-900/20 scale-105" : "bg-white text-slate-500 hover:bg-slate-100 border border-slate-200"}`}
+          >
+            SUMMARY
+          </button>
+          <button 
+            onClick={() => setDemoMode("rewrite")}
+            className={`px-3 py-1.5 rounded-md text-[10px] font-bold tracking-wider transition-all duration-300 ${demoMode === "rewrite" ? "bg-slate-800 text-white shadow-md shadow-slate-900/20 scale-105" : "bg-white text-slate-500 hover:bg-slate-100 border border-slate-200"}`}
+          >
+            REWRITE
+          </button>
+        </div>
+      </div>
+      {/* Body */}
+      <div className="p-6 md:p-8 flex flex-col gap-5 text-sm leading-relaxed overflow-y-auto w-full h-full custom-scrollbar">
+        <div className="space-y-3 shrink-0">
+          <div className="text-slate-500 font-semibold flex items-center gap-2 text-xs uppercase tracking-wider">
+            <XCircle className={`w-4 h-4 ${clause.colors.icon}`} /> 
+            <span className="truncate">原条款 (风险项: {clause.id} {clause.name})</span>
+          </div>
+          <div className={`${clause.colors.bg} border ${clause.colors.border} rounded-xl p-5 text-slate-600 leading-relaxed text-[15px]`}>
+            "{clause.original}"
+          </div>
+        </div>
+        
+        <div className="flex justify-center -my-3 relative z-10 hidden sm:flex shrink-0">
+           <div className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-400">
+             <ArrowDown className="w-4 h-4" />
+           </div>
+        </div>
+
+        <div className="min-h-[250px] w-full shrink-0">
+          <AnimatePresence mode="wait">
+            {demoMode === "rewrite" ? (
+              <motion.div 
+                key="rewrite" 
+                initial={{ opacity: 0, y: 10, scale: 0.98 }} 
+                animate={{ opacity: 1, y: 0, scale: 1 }} 
+                exit={{ opacity: 0, y: -10, scale: 0.98 }} 
+                transition={{ duration: 0.3 }}
+                className="space-y-3"
+              >
+                <div className="text-slate-500 font-semibold flex items-center gap-2 text-xs uppercase tracking-wider">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" /> 合规重写模式 (Rewrite)
+                </div>
+                <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-5 text-slate-700 leading-relaxed text-[15px] shadow-sm">
+                  "{clause.rewrite}"
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="summary" 
+                initial={{ opacity: 0, y: 10, scale: 0.98 }} 
+                animate={{ opacity: 1, y: 0, scale: 1 }} 
+                exit={{ opacity: 0, y: -10, scale: 0.98 }} 
+                transition={{ duration: 0.3 }}
+                className="space-y-3"
+              >
+                <div className="text-slate-500 font-semibold flex items-center gap-2 text-xs uppercase tracking-wider">
+                  <Lightbulb className="w-4 h-4 text-amber-500" /> 摘要解读模式 (Summary)
+                </div>
+                <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-5 text-slate-700 leading-relaxed text-[14px] shadow-sm space-y-4">
+                  <div>
+                    <div className="font-bold text-amber-900 mb-1 flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>一句话概括</div>
+                    <div className="text-amber-800/80">{clause.summaryOutline}</div>
+                  </div>
+                  <div className="h-px w-full bg-amber-200/60"></div>
+                  <div>
+                    <div className="font-bold text-amber-900 mb-2 flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>通俗解读</div>
+                    <ol className="list-decimal pl-4 space-y-1.5 text-amber-800/80 marker:font-bold marker:text-amber-500/70">
+                      {clause.summaryDetail.map((d, i) => (
+                        <li key={i}>
+                          <strong className="text-amber-900">{d.q}</strong> {d.a}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Landing() {
+  const { scrollY } = useScroll();
+  const videoY = useTransform(scrollY, [0, 1000], [0, 150]);
+  const heroY = useTransform(scrollY, [0, 500], [0, 100]);
+  const heroOpacity = useTransform(scrollY, [0, 500], [1, 0]);
+  const [toastMessage, setToastMessage] = useState("");
+  const [activeTab, setActiveTab] = useState(0);
+
+  const handleExperienceClick = () => {
+    setToastMessage("请先登录");
+    setTimeout(() => setToastMessage(""), 3000);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-zinc-100 selection:bg-slate-200 selection:text-slate-900 relative overflow-x-hidden">
       
-      {/* Liquid Background Blobs */}
-      <div className="fixed inset-0 -z-20 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-200/30 blur-[120px] animate-blob mix-blend-multiply"></div>
-        <div className="absolute top-[20%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-blue-200/30 blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply"></div>
-        <div className="absolute bottom-[-20%] left-[20%] w-[60vw] h-[60vw] rounded-full bg-purple-200/30 blur-[140px] animate-blob animation-delay-4000 mix-blend-multiply"></div>
+      {/* Cinematic Noise Grain */}
+      <div className="pointer-events-none fixed inset-0 z-50 h-full w-full opacity-[0.04] mix-blend-overlay">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" className="h-full w-full">
+          <filter id="noiseFilter">
+            <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#noiseFilter)" />
+        </svg>
       </div>
 
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex justify-center overflow-hidden bg-white">
+      {/* Liquid Background Blobs */}
+      <div className="fixed inset-0 -z-20 overflow-hidden pointer-events-none">
+        <div className="absolute top-[10%] left-[10%] w-[40vw] h-[40vw] rounded-full bg-slate-400/30 blur-[120px] animate-blob"></div>
+        <div className="absolute top-[40%] right-[10%] w-[30vw] h-[30vw] rounded-full bg-zinc-400/30 blur-[120px] animate-blob animation-delay-2000"></div>
+        <div className="absolute bottom-[10%] left-[30%] w-[50vw] h-[50vw] rounded-full bg-stone-400/30 blur-[120px] animate-blob animation-delay-4000"></div>
+      </div>
+
+      {/* Background Waves (Replaces Video) */}
+      <section className="relative min-h-screen flex justify-center overflow-hidden">
         
-        {/* Background Video */}
-        <div className="absolute inset-0 z-0 h-full w-full">
-          <video 
-            autoPlay 
-            loop 
-            muted 
-            playsInline 
-            className="w-full h-full object-cover [transform:scaleY(-1)]"
-          >
-            <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260302_085640_276ea93b-d7da-4418-a09b-2aa5b490e838.mp4" type="video/mp4"/>
-          </video>
-          <div className="absolute inset-0 bg-gradient-to-b from-[26.416%] from-[rgba(255,255,255,0)] to-[66.943%] to-white pointer-events-none"></div>
-        </div>
+        {/* Background Waves */}
+        <motion.div 
+          className="absolute top-0 left-0 right-0 bottom-0 z-0 pointer-events-auto h-full w-full opacity-100"
+          style={{ 
+            maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)'
+          }}
+        >
+          <motion.div style={{ y: videoY }} className="w-full h-full relative" >
+            <ColorBends 
+              colors={["#a78bfa", "#818cf8", "#3b82f6"]}
+              rotation={90}
+              speed={0.2}
+              scale={1}
+              frequency={1}
+              warpStrength={1}
+              mouseInfluence={2.0}
+              noise={0.0}
+              parallax={0.5}
+              iterations={1}
+              intensity={0.9}
+              bandWidth={6}
+              transparent={true}
+              className="w-full h-full absolute inset-0 opacity-100 pointer-events-none"
+            />
+          </motion.div>
+        </motion.div>
         
         {/* Main Content Container */}
         <motion.div 
           style={{ y: heroY, opacity: heroOpacity }}
-          className="relative z-10 w-full max-w-[1200px] pt-[290px] px-6 flex flex-col items-center gap-[32px]"
+          className="relative z-10 w-full max-w-[1200px] pt-[160px] pb-[100px] px-6 flex flex-col items-center gap-[32px]"
         >
           
-          <motion.h1 
-            initial={{ opacity: 0, y: 30, filter: "blur(12px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ type: "spring", stiffness: 60, damping: 20, delay: 0.1 }}
-            className="font-geist font-medium tracking-[-0.04em] text-5xl md:text-[80px] leading-[1.1] text-center text-slate-900"
+          {/* Noomo-style Pill Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: [0.76, 0, 0.24, 1] }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 text-slate-800 border border-slate-200 shadow-sm mb-4"
           >
-            Intelligent <span className="font-serif italic text-6xl md:text-[100px] font-normal text-indigo-600">compliance</span><br />
-            for your privacy policies
-          </motion.h1>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+            </span>
+            <span className="text-xs font-semibold tracking-widest uppercase font-mono">PrivacyGuard 1.0 is live</span>
+          </motion.div>
 
-          <motion.p 
-            initial={{ opacity: 0, y: 30, filter: "blur(12px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ type: "spring", stiffness: 60, damping: 20, delay: 0.2 }}
-            className="font-geist text-[18px] text-[#373a46] opacity-80 max-w-[554px] text-center"
-          >
-            Architect.ai 结合最先进的 AI 深度神经网络与法律专家经验，为企业提供毫秒级的全方位隐私风险监测与整改建议。
-          </motion.p>
-
-          <motion.div 
-            initial={{ opacity: 0, y: 30, filter: "blur(12px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ type: "spring", stiffness: 60, damping: 20, delay: 0.3 }}
-            className="flex flex-col items-center gap-6 w-full max-w-md mt-4"
-          >
-            <div className="flex items-center w-full bg-[#fcfcfc] rounded-[40px] border border-gray-200/80 p-1.5 shadow-[0px_10px_40px_5px_rgba(194,194,194,0.25)]">
-              <input 
-                type="email" 
-                placeholder="输入您的工作邮箱" 
-                className="flex-1 bg-transparent border-none focus:ring-0 px-6 text-slate-700 font-geist outline-none"
-              />
-              <button
-                onClick={onGetStarted}
-                className="bg-slate-900 text-white rounded-full px-8 py-3.5 font-medium text-sm shadow-[inset_-4px_-6px_25px_0px_rgba(201,201,201,0.08),inset_4px_4px_10px_0px_rgba(29,29,29,0.24)] whitespace-nowrap transition-transform hover:scale-[1.02] active:scale-[0.98]"
+          {/* Heading */}
+          <h1 className="font-geist font-medium tracking-tighter text-5xl md:text-[72px] leading-[1.05] text-center text-slate-900 flex flex-col items-center">
+            <div className="overflow-hidden pb-2">
+              <motion.div
+                initial={{ y: "100%", rotate: 4 }}
+                animate={{ y: 0, rotate: 0 }}
+                transition={{ duration: 1.2, ease: [0.76, 0, 0.24, 1], delay: 0.1 }}
+                className="origin-left"
               >
-                免费试用
-              </button>
+                智能高效的 <span className="font-serif italic text-6xl md:text-[84px] font-normal text-slate-800 pr-2">隐私政策</span>
+              </motion.div>
             </div>
+            <div className="overflow-hidden pb-2">
+              <motion.div
+                initial={{ y: "100%", rotate: 4 }}
+                animate={{ y: 0, rotate: 0 }}
+                transition={{ duration: 1.2, ease: [0.76, 0, 0.24, 1], delay: 0.15 }}
+                className="origin-left"
+              >
+                合规审查平台
+              </motion.div>
+            </div>
+          </h1>
 
-            <div className="flex items-center gap-3 text-sm font-geist text-slate-500">
-              <div className="flex -space-x-2">
-                {[1,2,3,4,5].map(i => (
-                  <div key={i} className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center overflow-hidden">
-                    <img src={`https://picsum.photos/seed/${i + 10}/32/32`} alt="avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="flex text-amber-400">
-                  {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-current" />)}
-                </div>
-                <span className="font-medium text-slate-700 ml-1">1,020+ 企业信任</span>
-              </div>
-            </div>
+          {/* Description */}
+          <div className="overflow-hidden mt-2">
+            <motion.p 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              transition={{ duration: 1.2, ease: [0.76, 0, 0.24, 1], delay: 0.25 }}
+              className="font-geist text-[20px] text-slate-800 font-medium max-w-[600px] text-center mix-blend-color-burn"
+            >
+              支持多项隐私保护法规 · 快速生成合规报告
+            </motion.p>
+          </div>
+
+          {/* CTA Buttons */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.2, ease: [0.76, 0, 0.24, 1], delay: 0.35 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-5 w-full mt-8"
+          >
+            <MagneticButton 
+              onClick={handleExperienceClick}
+              className="group relative inline-flex items-center justify-center gap-3 bg-slate-900 text-white rounded-full px-10 py-5 font-semibold text-lg overflow-hidden transition-colors hover:bg-slate-800 shadow-[0_0_40px_-10px_rgba(0,0,0,0.3)]"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                立即体验
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+              </span>
+            </MagneticButton>
+            <MagneticButton 
+              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+              className="inline-flex items-center justify-center gap-2 bg-white/20 backdrop-blur-xl border border-white/40 text-slate-800 rounded-full px-10 py-5 font-semibold text-lg transition-colors hover:bg-white/40 hover:border-white/60"
+            >
+              了解更多
+            </MagneticButton>
           </motion.div>
         </motion.div>
       </section>
 
       {/* Features Section */}
-      <section className="py-32 relative z-10">
-        <div className="container mx-auto px-6 max-w-6xl space-y-40">
+      <section id="features" className="py-48 relative z-10">
+        <div className="container mx-auto px-6 max-w-6xl space-y-56">
           
           {/* Feature 1 */}
-          <ScrollReveal className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="space-y-8">
-              <div className="inline-flex items-center gap-3 text-indigo-600">
-                <span className="w-8 h-[1px] bg-indigo-600/50"></span>
+          <div className="space-y-16">
+            <ScrollReveal className="text-center max-w-3xl mx-auto space-y-6">
+              <div className="inline-flex items-center gap-3 text-slate-500">
+                <span className="w-8 h-[1px] bg-slate-300"></span>
                 <span className="text-xs font-bold tracking-widest uppercase font-mono">Detection Engine</span>
+                <span className="w-8 h-[1px] bg-slate-300"></span>
               </div>
-              <h2 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 leading-tight">
-                12类违规检测
-              </h2>
+              <ScrollFloat 
+                animationDuration={1} 
+                ease='back.inOut(2)' 
+                stagger={0.03}
+                containerClassName="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 leading-tight mb-0"
+              >
+                12大违规检测维度
+              </ScrollFloat>
               <p className="text-slate-600 text-xl leading-relaxed">
-                不仅是关键词匹配。利用深度学习语义分析，精准识别非法收集、超范围索权、账号注销困难等 12 大类、200+ 细分隐私违规项。
+                利用先进的自然语言处理技术，精准识别非法收集、超范围索权、账号注销困难等核心隐私违规项。
               </p>
-              <ul className="space-y-5">
-                {[
-                  '全自动静态与动态行为抓取',
-                  '覆盖出境合规与权限滥用检测',
-                  '毫秒级响应，支持 CI/CD 集成'
-                ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-4 text-slate-800 font-medium text-lg">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-                      <CheckCircle2 className="w-4 h-4" />
-                    </div>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="relative">
-              <div className="aspect-square rounded-[2.5rem] glass-panel p-8 relative overflow-hidden flex items-center justify-center">
-                 <motion.svg 
-                    viewBox="0 0 200 200" 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="absolute w-[120%] h-[120%] opacity-20 text-indigo-600"
-                  >
-                    <motion.path
-                      fill="currentColor"
-                      animate={{
-                        d: [
-                          "M44.7,-76.4C58.9,-69.2,71.8,-59.1,81.3,-46.3C90.8,-33.5,96.9,-18.1,95.8,-3.2C94.7,11.7,86.4,26.1,76.5,38.8C66.6,51.5,55.1,62.5,41.8,70.5C28.5,78.5,13.4,83.5,-1.3,85.8C-16,88.1,-32,87.7,-45.4,79.8C-58.8,71.9,-69.6,56.5,-77.8,40.4C-86,24.3,-91.6,7.5,-89.6,-8.4C-87.6,-24.3,-78,-39.3,-65.9,-50.6C-53.8,-61.9,-39.2,-69.5,-24.9,-73.9C-10.6,-78.3,3.4,-79.5,17.7,-78.9C32,-78.3,44.7,-76.4,44.7,-76.4Z",
-                          "M51.5,-74.5C65.5,-65.5,74.8,-49.6,81.1,-32.8C87.4,-16,90.7,1.7,86.5,17.6C82.3,33.5,70.6,47.6,56.8,58.3C43,69,27.1,76.3,10.6,79.5C-5.9,82.7,-23,81.8,-38.2,74.4C-53.4,67,-66.7,53.1,-75.4,37.1C-84.1,21.1,-88.2,3,-85.1,-13.7C-82,-30.4,-71.7,-45.7,-58.5,-56.3C-45.3,-66.9,-29.2,-72.8,-13.3,-75.4C2.6,-78,18.5,-77.3,34.1,-74.5C49.7,-71.7,51.5,-74.5,51.5,-74.5Z",
-                          "M44.7,-76.4C58.9,-69.2,71.8,-59.1,81.3,-46.3C90.8,-33.5,96.9,-18.1,95.8,-3.2C94.7,11.7,86.4,26.1,76.5,38.8C66.6,51.5,55.1,62.5,41.8,70.5C28.5,78.5,13.4,83.5,-1.3,85.8C-16,88.1,-32,87.7,-45.4,79.8C-58.8,71.9,-69.6,56.5,-77.8,40.4C-86,24.3,-91.6,7.5,-89.6,-8.4C-87.6,-24.3,-78,-39.3,-65.9,-50.6C-53.8,-61.9,-39.2,-69.5,-24.9,-73.9C-10.6,-78.3,3.4,-79.5,17.7,-78.9C32,-78.3,44.7,-76.4,44.7,-76.4Z"
-                        ]
-                      }}
-                      transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                 </motion.svg>
-                 
-                 <div className="relative h-full w-full flex flex-col justify-center gap-4 z-10">
-                    <motion.div 
-                      className="glass-panel p-5 rounded-2xl flex items-center justify-between"
-                      initial={{ opacity: 0, x: 20 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.5 }}
+            </ScrollReveal>
+
+            <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+              {/* Tabs Sidebar */}
+              <ScrollSlide direction="left" className="lg:col-span-4 flex flex-col gap-3 relative">
+                {complianceData.map((tab, idx) => {
+                  const isActive = activeTab === idx;
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(idx)}
+                      className={`text-left px-6 py-5 rounded-2xl transition-all duration-500 flex items-center justify-between group relative z-10 ${
+                        isActive 
+                          ? '' 
+                          : 'hover:bg-white/20'
+                      }`}
                     >
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeTabBackground"
+                          className="absolute inset-0 bg-gradient-to-br from-slate-50/80 to-slate-200/50 backdrop-blur-2xl shadow-md border border-white/80 rounded-2xl -z-10"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                      )}
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-600"><ShieldCheck className="w-6 h-6"/></div>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-500 ${
+                          isActive ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-500 group-hover:text-slate-900'
+                        }`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
                         <div>
-                          <div className="text-base font-semibold text-slate-900">超范围索权</div>
-                          <div className="text-xs text-slate-500 font-mono mt-1">MainActivity.java</div>
+                          <div className={`font-semibold text-base transition-colors duration-500 ${isActive ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'}`}>
+                            {tab.title}
+                          </div>
+                          <div className={`text-xs font-mono mt-0.5 transition-colors duration-500 ${isActive ? 'text-slate-500' : 'text-slate-400'}`}>{tab.count} 项检测</div>
                         </div>
                       </div>
-                      <span className="text-xs font-mono text-red-600 bg-red-500/10 px-3 py-1.5 rounded-lg font-semibold">High Risk</span>
-                    </motion.div>
-                    
-                    <motion.div 
-                      className="glass-panel p-5 rounded-2xl flex items-center justify-between opacity-90"
-                      initial={{ opacity: 0, x: 20 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.5, delay: 0.1 }}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600"><Database className="w-6 h-6"/></div>
-                        <div>
-                          <div className="text-base font-semibold text-slate-900">数据未加密传输</div>
-                          <div className="text-xs text-slate-500 font-mono mt-1">NetworkClient.kt</div>
+                      <div className={`w-1.5 h-8 rounded-full transition-all duration-500 ${isActive ? 'bg-slate-900 shadow-sm' : 'bg-transparent'}`} />
+                    </button>
+                  );
+                })}
+              </ScrollSlide>
+
+              {/* Tab Content */}
+              <ScrollSlide direction="right" className="lg:col-span-8">
+                <div className="bg-gradient-to-br from-slate-50/80 to-slate-200/50 backdrop-blur-3xl rounded-[2rem] border border-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.08)] overflow-hidden min-h-[500px]">
+                  <div className="px-8 py-6 border-b border-white/40 bg-white/30 flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-slate-900">{complianceData[activeTab].title}</h3>
+                    <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-semibold tracking-wide">
+                      {complianceData[activeTab].count} RULES
+                    </span>
+                  </div>
+                  <div className="divide-y divide-white/30">
+                    {complianceData[activeTab].items.map((item, idx) => (
+                      <motion.div 
+                        key={`${activeTab}-${idx}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: idx * 0.05 }}
+                        className="p-8 hover:bg-white/30 transition-colors"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-3">
+                              <div className="w-2 h-2 rounded-full bg-rose-400" />
+                              <h4 className="text-lg font-semibold text-slate-900">{item.name}</h4>
+                            </div>
+                            <p className="text-slate-600 leading-relaxed pl-5">
+                              {item.desc}
+                            </p>
+                          </div>
+                          <div className="md:w-1/3 shrink-0 pl-5 md:pl-0">
+                            <div className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-2 font-mono">违规判定依据</div>
+                            <div className="text-sm text-slate-700 font-medium bg-slate-100/80 px-3 py-2 rounded-lg inline-block">
+                              {item.law}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <span className="text-xs font-mono text-amber-600 bg-amber-500/10 px-3 py-1.5 rounded-lg font-semibold">Medium</span>
-                    </motion.div>
-                 </div>
-              </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </ScrollSlide>
             </div>
-          </ScrollReveal>
+          </div>
 
           {/* Feature 2 */}
-          <ScrollReveal className="grid md:grid-cols-2 gap-16 items-center">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="order-2 md:order-1 grid grid-cols-2 gap-6">
-              <motion.div 
-                whileHover={{ scale: 1.02, y: -5 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="glass-panel p-8 rounded-[2rem] space-y-6 md:translate-y-12"
-              >
-                <div className="w-14 h-14 bg-indigo-600/5 rounded-2xl flex items-center justify-center text-indigo-600">
-                  <Globe className="w-7 h-7" />
-                </div>
-                <h3 className="font-bold text-xl text-slate-900">全球法规同步</h3>
-                <p className="text-sm text-slate-600 leading-relaxed font-medium">支持中国《个人信息保护法》、GDPR、CCPA 等全球主流隐私法规。</p>
-              </motion.div>
-              <motion.div 
-                whileHover={{ scale: 1.02, y: -5 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="glass-panel p-8 rounded-[2rem] space-y-6"
-              >
-                <div className="w-14 h-14 bg-indigo-600/5 rounded-2xl flex items-center justify-center text-indigo-600">
-                  <Database className="w-7 h-7" />
-                </div>
-                <h3 className="font-bold text-xl text-slate-900">专家级 RAG</h3>
-                <p className="text-sm text-slate-600 leading-relaxed font-medium">基于 CAPP-130 论文与向量数据库的法律检索，提供具备法理依据的检测判词。</p>
-              </motion.div>
+              <InteractiveFlipCard
+                frontIcon={Globe}
+                frontTitle="广泛的法规覆盖"
+                frontDesc="全面覆盖《个人信息保护法》等国内主流隐私保护法律法规，审查标准紧跟监管。"
+                backContent={
+                  <ul className="list-disc pl-4 space-y-2">
+                    <li>《中华人民共和国个人信息保护法》(PIPL)</li>
+                    <li>《中华人民共和国数据安全法》(DSL)</li>
+                    <li>《网络安全法》(CSL)</li>
+                    <li>《App违法违规收集使用个人信息行为认定方法》</li>
+                    <li>GB/T 35273—2020《个人信息安全规范》</li>
+                  </ul>
+                }
+                delay={0.1}
+                className="md:translate-y-12"
+              />
+              <InteractiveFlipCard
+                frontIcon={Database}
+                frontTitle="RAG 智能法律检索"
+                frontDesc="自动为每个维度的违规项匹配具体的法律渊源与相关条文正文。"
+                backContent={
+                  <div className="space-y-3">
+                    <p>1. 高效的条文语义片段检索</p>
+                    <p>2. 精确匹配至具体的法律条例</p>
+                    <p>3. 提取诸如《个保法》等法条正文</p>
+                    <p>4. 避免黑盒结论，确保审查有法可依</p>
+                  </div>
+                }
+                delay={0.2}
+              />
             </div>
-            <div className="order-1 md:order-2 space-y-8">
-              <div className="inline-flex items-center gap-3 text-indigo-600">
-                <span className="w-8 h-[1px] bg-indigo-600/50"></span>
+            <ScrollSlide direction="right" className="order-1 md:order-2 space-y-8">
+              <div className="inline-flex items-center gap-3 text-slate-500">
+                <span className="w-8 h-[1px] bg-slate-300"></span>
                 <span className="text-xs font-bold tracking-widest uppercase font-mono">Intelligence Base</span>
               </div>
-              <h2 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 leading-tight">
-                RAG 法律知识库
-              </h2>
-              <p className="text-slate-600 text-xl leading-relaxed">
-                内置千万级隐私法律文书与行政处罚案例。通过 Retrieval-Augmented Generation 技术，为每一个检测项提供精准的法律溯源与解读。
+              <ScrollFloat 
+                animationDuration={1} 
+                ease='back.inOut(2)' 
+                stagger={0.05}
+                containerClassName="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 leading-tight mb-0"
+              >
+                RAG 法律精准溯源
+              </ScrollFloat>
+              <p className="text-slate-700 text-xl leading-relaxed">
+                内置标准隐私法律文书。通过检索增强（RAG）技术，智能在底层为每一个检测到的违规项提供精准的溯源支持与完整的法条上下文。
               </p>
-              <blockquote className="p-8 glass-panel rounded-3xl border-l-4 border-l-indigo-600 text-slate-700 italic font-serif text-2xl">
-                "AI 不再是黑盒，每一处违规建议皆有法可依。"
+              <blockquote className="p-8 bg-gradient-to-br from-slate-50/80 to-slate-200/50 backdrop-blur-3xl border border-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.08)] rounded-3xl border-l-4 border-l-slate-800 text-slate-800 italic font-serif text-2xl">
+                "不仅告诉你哪里违规，更告诉你背后的明确法律出处。"
               </blockquote>
-            </div>
-          </ScrollReveal>
+            </ScrollSlide>
+          </div>
 
           {/* Feature 3 - Code Fixes */}
-          <ScrollReveal className="glass-panel-dark rounded-[3rem] p-10 md:p-16 overflow-hidden relative text-white">
-            <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
-              <Lightbulb className="w-64 h-64" />
+          <ScrollUnfold className="bg-gradient-to-br from-slate-50/80 to-slate-200/50 backdrop-blur-3xl border border-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.08)] rounded-[3rem] p-10 md:p-16 overflow-hidden relative">
+            <div className="absolute inset-0 z-0 opacity-[0.15] mix-blend-multiply">
+              <Threads amplitude={2} distance={0} enableMouseInteraction={true} color={[0.4, 0.4, 0.5]} />
             </div>
-            <div className="grid md:grid-cols-12 gap-16 relative z-10 items-center">
-              <div className="col-span-12 md:col-span-5 space-y-8">
-                <h3 className="text-4xl md:text-5xl font-bold tracking-tight">AI 整改建议</h3>
-                <p className="text-slate-300 text-lg leading-relaxed">
-                  自动生成针对开发者的代码级修复方案。无需法律背景，一键理解合规要求并完成技术整改。
+            <div className="grid md:grid-cols-12 gap-16 relative z-10 items-center pointer-events-none">
+              <div className="col-span-12 md:col-span-5 space-y-8 pointer-events-auto">
+                <h3 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900">双模式智能整改</h3>
+                <p className="text-slate-600 text-lg leading-relaxed">
+                  针对风险条款自动生成方案。系统提供「极简概括+通俗解读」与「专业合规文本重写」双重模式，不仅帮您一键看懂复杂条文，更可直接生成修订文本。
                 </p>
                 
                 <div className="pt-8 w-full">
                   <div className="flex justify-between mb-4 items-end">
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400 font-mono">当前合规评分</span>
-                    <span className="text-5xl font-bold text-white tracking-tight">98.5<span className="text-xl text-slate-500 ml-1">%</span></span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-500 font-mono">当前合规评分</span>
+                    <span className="text-5xl font-bold text-slate-900 tracking-tight">68.5<span className="text-xl text-slate-500 ml-1">%</span></span>
                   </div>
-                  <div className="w-full h-2 bg-slate-800/50 rounded-full overflow-hidden backdrop-blur-sm">
+                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                     <motion.div 
-                      className="h-full bg-indigo-500 rounded-full relative"
+                      className="h-full bg-slate-800 rounded-full relative"
                       initial={{ width: 0 }}
-                      whileInView={{ width: '98.5%' }}
+                      whileInView={{ width: '68.5%' }}
                       viewport={{ once: true }}
                       transition={{ duration: 1.5, ease: "easeOut" }}
                     >
@@ -290,61 +688,50 @@ export default function Landing({ onGetStarted }: LandingProps) {
                 </div>
               </div>
 
-              <div className="col-span-12 md:col-span-7 bg-slate-950/80 backdrop-blur-xl rounded-3xl border border-slate-700/50 shadow-2xl overflow-hidden flex flex-col">
-                <div className="bg-slate-900/80 px-5 py-4 border-b border-slate-800/80 flex items-center gap-3">
-                  <div className="flex gap-2">
-                    <div className="w-3.5 h-3.5 rounded-full bg-rose-500/80"></div>
-                    <div className="w-3.5 h-3.5 rounded-full bg-amber-500/80"></div>
-                    <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/80"></div>
-                  </div>
-                  <span className="text-xs font-mono text-slate-400 ml-3 tracking-wider">App.kt</span>
-                </div>
-                <div className="p-8 overflow-x-auto font-mono text-sm leading-relaxed">
-                  <div className="text-slate-500 mb-3">// ❌ 违规：未判断用户同意即获取设备ID</div>
-                  <div className="text-rose-400 bg-rose-500/10 px-3 py-1 -mx-3 mb-5 line-through opacity-80 border-l-2 border-rose-500/50">
-                    val deviceId = TelephonyManager.getDeviceId()
-                  </div>
-                  <div className="text-slate-500 mb-3">// ✅ 修复：添加同意状态前置判断</div>
-                  <div className="text-emerald-400 bg-emerald-500/10 px-3 py-1 -mx-3 border-l-2 border-emerald-500/50">
-                    if (PrivacyManager.hasUserConsented()) {'{'}
-                  </div>
-                  <div className="text-emerald-400 bg-emerald-500/10 px-3 py-1 -mx-3 pl-8 border-l-2 border-emerald-500/50">
-                    val deviceId = TelephonyManager.getDeviceId()
-                  </div>
-                  <div className="text-emerald-400 bg-emerald-500/10 px-3 py-1 -mx-3 border-l-2 border-emerald-500/50">
-                    {'}'} else {'{'}
-                  </div>
-                  <div className="text-emerald-400 bg-emerald-500/10 px-3 py-1 -mx-3 pl-8 text-slate-400 border-l-2 border-emerald-500/50">
-                    // 处理未授权逻辑
-                  </div>
-                  <div className="text-emerald-400 bg-emerald-500/10 px-3 py-1 -mx-3 border-l-2 border-emerald-500/50">
-                    {'}'}
-                  </div>
+              <div className="col-span-12 md:col-span-7 w-full h-[600px] flex items-center justify-center relative pointer-events-auto">
+                <Stack 
+                  randomRotation={true}
+                  sensitivity={100}
+                  sendToBackOnClick={false}
+                  cards={MOCK_CLAUSES.map(c => <DemoClauseCard key={c.id} clause={c} />)}
+                />
+                
+                {/* Drag Hint */}
+                <div className="absolute -bottom-10 right-4 text-slate-400 text-xs font-mono font-bold tracking-widest flex items-center gap-2 pointer-events-none opacity-50">
+                  DRAG CARD TO SKIP <ArrowRight className="w-3 h-3" />
                 </div>
               </div>
             </div>
-          </ScrollReveal>
+          </ScrollUnfold>
 
         </div>
       </section>
 
       {/* Step Guide */}
-      <section className="py-32 relative z-10">
+      <section id="workflow" className="py-32 relative z-10">
         <ScrollReveal className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-24">
-            <span className="inline-block uppercase tracking-widest text-indigo-600 mb-4 text-xs font-bold font-mono">Workflow</span>
-            <h2 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-900">如何开始</h2>
+            <span className="inline-block uppercase tracking-widest text-slate-500 mb-4 text-xs font-bold font-mono">Workflow</span>
+            <ScrollFloat 
+              animationDuration={1} 
+              ease='back.inOut(2)' 
+              stagger={0.05}
+              containerClassName="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 mb-0"
+            >
+              如何开始
+            </ScrollFloat>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-12 relative">
-            <div className="hidden md:block absolute top-16 left-[15%] right-[15%] h-[2px] z-0">
+          <div className="flex flex-col gap-8 relative max-w-3xl mx-auto">
+            {/* SVG Animated Connecting Line */}
+            <div className="hidden md:block absolute left-[48px] top-24 bottom-24 w-[2px] z-0">
                <svg width="100%" height="100%" preserveAspectRatio="none">
                   <motion.line 
-                    x1="0" y1="0" x2="100%" y2="0" 
+                    x1="0" y1="0" x2="0" y2="100%" 
                     stroke="currentColor" 
                     strokeWidth="2" 
                     strokeDasharray="8 8"
-                    className="text-indigo-200"
+                    className="text-slate-200"
                     initial={{ pathLength: 0 }}
                     whileInView={{ pathLength: 1 }}
                     viewport={{ once: true }}
@@ -354,36 +741,52 @@ export default function Landing({ onGetStarted }: LandingProps) {
             </div>
 
             {[
-              { icon: UploadCloud, title: '上传应用包', desc: '支持 APK, IPA, SDK 以及小程序源码包的直接上传，秒级识别。' },
-              { icon: BrainCircuit, title: 'AI 深度分析', desc: '系统自动启动沙盒模拟运行，并结合 RAG 法律大模型进行多维比对。' },
-              { icon: FileText, title: '获取合规报告', desc: '一键下载全方位的合规审查报告与修复建议，助您从容面对监管。' }
+              { icon: UploadCloud, title: '导入隐私政策', desc: '支持纯文本粘贴，或直接上传 TXT/DOC/PDF 格式文件，也可一键抓取网页 URL 原文。' },
+              { icon: BrainCircuit, title: '条款分类分析与法条匹配', desc: '系统全自动化核心分析，精准识别12大类违规指标，并同步对接底层实现 RAG 法条搜索并匹配。' },
+              { icon: FileText, title: '双模式整改与导出报告', desc: '利用「摘要解读与合规重写」优化风险条款，采纳后一键下载包含具体建议的纯文本综合合规报告。' }
             ].map((step, i) => (
               <motion.div 
                 key={i} 
-                whileHover={{ scale: 1.02, y: -8 }}
+                whileHover={{ scale: 1.02, x: 8 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="relative z-10 glass-panel p-12 rounded-[3rem] flex flex-col items-center text-center"
+                className="relative z-10 bg-gradient-to-br from-slate-50/80 to-slate-200/50 backdrop-blur-3xl border border-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.08)] p-8 md:p-10 rounded-[2rem] flex flex-col md:flex-row items-start md:items-center gap-8 text-left"
               >
-                <div className="w-24 h-24 bg-white/60 backdrop-blur-md rounded-3xl shadow-sm border border-white flex items-center justify-center text-indigo-600 mb-8">
-                  <step.icon className="w-10 h-10" />
+                <div className="w-20 h-20 shrink-0 bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-xl rounded-2xl shadow-sm border border-white flex items-center justify-center text-slate-800">
+                  {i === 0 ? (
+                    <Folder size={0.6} color="#475569" className="-translate-y-1" />
+                  ) : (
+                    <step.icon className="w-8 h-8" />
+                  )}
                 </div>
-                <span className="text-indigo-600 text-xs font-bold tracking-widest uppercase mb-4 font-mono">Step 0{i + 1}</span>
-                <h3 className="text-3xl font-bold text-slate-900 mb-6">{step.title}</h3>
-                <p className="text-slate-600 leading-relaxed font-medium">{step.desc}</p>
+                <div>
+                  <span className="text-slate-500 text-xs font-bold tracking-widest uppercase mb-2 block font-mono">Step 0{i + 1}</span>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-3">{step.title}</h3>
+                  <p className="text-slate-600 leading-relaxed font-medium">{step.desc}</p>
+                </div>
               </motion.div>
             ))}
           </div>
 
           <div className="mt-24 text-center">
-            <button
-              onClick={onGetStarted}
-              className="inline-flex items-center gap-2 bg-slate-900 text-white rounded-full px-10 py-4 font-medium text-lg shadow-[inset_-4px_-6px_25px_0px_rgba(201,201,201,0.08),inset_4px_4px_10px_0px_rgba(29,29,29,0.24)] transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            >
+            <button onClick={handleExperienceClick} className="inline-flex items-center gap-2 bg-slate-900 text-white rounded-full px-10 py-4 font-medium text-lg shadow-[inset_-4px_-6px_25px_0px_rgba(201,201,201,0.08),inset_4px_4px_10px_0px_rgba(29,29,29,0.24)] transition-transform hover:scale-[1.02] active:scale-[0.98]">
               立即开始使用
             </button>
           </div>
         </ScrollReveal>
       </section>
+
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 20, x: "-50%" }}
+            className="fixed bottom-10 left-1/2 z-[100] bg-slate-900 text-white px-6 py-3 rounded-full shadow-xl font-medium"
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

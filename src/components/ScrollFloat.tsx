@@ -29,7 +29,7 @@ const ScrollFloat = ({
   scrollEnd = 'bottom bottom-=40%',
   stagger = 0.03
 }: ScrollFloatProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef(null);
 
   const splitText = useMemo(() => {
     const text = typeof children === 'string' ? children : '';

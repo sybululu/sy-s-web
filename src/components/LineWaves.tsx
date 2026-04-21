@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 
 import './LineWaves.css';
 
-function hexToVec3(hex: string) {
+function hexToVec3(hex) {
   const h = hex.replace('#', '');
   return [
     parseInt(h.slice(0, 2), 16) / 255,
@@ -131,23 +131,6 @@ void main() {
 }
 `;
 
-interface LineWavesProps {
-  speed?: number;
-  innerLineCount?: number;
-  outerLineCount?: number;
-  warpIntensity?: number;
-  rotation?: number;
-  edgeFadeWidth?: number;
-  colorCycleSpeed?: number;
-  brightness?: number;
-  color1?: string;
-  color2?: string;
-  color3?: string;
-  enableMouseInteraction?: boolean;
-  mouseInfluence?: number;
-  className?: string;
-}
-
 export default function LineWaves({
   speed = 0.3,
   innerLineCount = 32.0,
@@ -163,8 +146,8 @@ export default function LineWaves({
   enableMouseInteraction = true,
   mouseInfluence = 2.0,
   className = ""
-}: LineWavesProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+}) {
+  const containerRef = useRef(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -173,11 +156,11 @@ export default function LineWaves({
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, 0);
 
-    let program: Program | null = null;
+    let program;
     let currentMouse = [0.5, 0.5];
     let targetMouse = [0.5, 0.5];
 
-    function handleMouseMove(e: MouseEvent) {
+    function handleMouseMove(e) {
       if (!gl.canvas) return;
       const rect = gl.canvas.getBoundingClientRect();
       targetMouse = [
@@ -233,11 +216,10 @@ export default function LineWaves({
       window.addEventListener('mouseleave', handleMouseLeave);
     }
 
-    let animationFrameId: number;
+    let animationFrameId;
 
-    function update(time: number) {
+    function update(time) {
       animationFrameId = requestAnimationFrame(update);
-      if (!program) return;
       program.uniforms.uTime.value = time * 0.001;
 
       if (enableMouseInteraction) {
