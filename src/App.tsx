@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { ViewType, Project, Clause, ToastState, User, mapRawToClauses, getRiskStatus } from './types';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -17,16 +17,81 @@ import Login from './components/Login';
 import Register from './components/Register';
 import { api } from './utils/api';
 import { AnimatePresence, motion } from 'motion/react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 
 // Hero 营销站组件（新版 sybululu/hero）
 import Navbar from './components/Navbar';
 import Landing from './pages/Landing';
+import Pricing from './pages/Pricing';
 import Footer from './components/Footer';
 
+// ═══════════════════════════════════════════
+// 营销站布局：Navbar + 内容 + Footer
+// ═══════════════════════════════════════════
+function MarketingLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="hero-marketing min-h-screen">
+      <Navbar />
+      <main>{children}</main>
+      <Footer />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// 完整登录/注册页面（全屏，非弹窗）
+// ═══════════════════════════════════════════
+function AuthPage({
+  isRegistering,
+  onLogin,
+  onRegister,
+  onSwitchToLogin,
+  onSwitchToRegister,
+  showToast,
+  onBack
+}: {
+  isRegistering: boolean;
+  onLogin: (token: string, user: User) => void;
+  onRegister: (token: string, user: User) => void;
+  onSwitchToLogin: () => void;
+  onSwitchToRegister: () => void;
+  showToast: (msg: string, type?: 'success' | 'error') => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="hero-marketing min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50 px-4">
+      <div className="w-full max-w-md relative">
+        {/* 返回按钮 */}
+        <button
+          onClick={onBack}
+          className="absolute -top-12 left-0 text-sm text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1"
+        >
+          ← 返回首页
+        </button>
+
+        {isRegistering ? (
+          <Register
+            onRegister={(token, user) => { onRegister(token, user); }}
+            onSwitchToLogin={onSwitchToLogin}
+            onShowToast={showToast}
+          />
+        ) : (
+          <Login
+            onLogin={onLogin}
+            onSwitchToRegister={onSwitchToRegister}
+            onShowToast={showToast}
+          />
+        )}
+      </div>
+      <Toast toast={{ message: '', type: 'success', visible: false }} />
+    </div>
+  );
+}
+
 export default function App() {
+  const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentView, setCurrentView] = useState<ViewType>('overview');
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
@@ -50,7 +115,7 @@ export default function App() {
     setAnalysisStep('');
   }, []);
 
-  // 未登录时：Hook Hero 营销站的"立即体验"/"立即开始使用"按钮 → 打开登录弹窗
+  // 未登录时：Hook Hero 营销站的"立即体验"/"立即开始使用"按钮 → 跳转完整登录页
   useEffect(() => {
     if (isLoggedIn) return;
     const handleExperienceClick = (e: MouseEvent) => {
@@ -61,13 +126,13 @@ export default function App() {
       ) {
         e.preventDefault();
         e.stopPropagation();
-        setShowAuthModal(true);
         setIsRegistering(false);
+        navigate('/login');
       }
     };
     document.addEventListener('click', handleExperienceClick, true);
     return () => document.removeEventListener('click', handleExperienceClick, true);
-  }, [isLoggedIn]);
+  }, [isLoggedIn, navigate]);
 
   useEffect(() => {
     // 检查本地是否已有 token
@@ -268,60 +333,34 @@ export default function App() {
   };
 
   // ═══════════════════════════════════════════
-  // 未登录 → Hero 营销站 + 登录弹窗
+  // 未登录 → Hero 营销站（含路由：首页/定价/登录）
   // 已登录 → B 端产品
   // ═══════════════════════════════════════════
   if (!isLoggedIn) {
     return (
-      <div className="hero-marketing min-h-screen">
-        <Navbar />
-        <Landing />
-        <Footer />
-
-        {/* 登录/注册弹窗（由 Hero 的"立即体验"/"立即开始使用"按钮触发） */}
-        <AnimatePresence>
-          {showAuthModal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-              onClick={() => setShowAuthModal(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {isRegistering ? (
-                  <Register
-                    onRegister={(token, user) => {
-                      handleLogin(token, user);
-                      setShowAuthModal(false);
-                      setIsRegistering(false);
-                    }}
-                    onSwitchToLogin={() => setIsRegistering(false)}
-                    onShowToast={showToast}
-                  />
-                ) : (
-                  <Login
-                    onLogin={(token, user) => {
-                      handleLogin(token, user);
-                      setShowAuthModal(false);
-                    }}
-                    onSwitchToRegister={() => setIsRegistering(true)}
-                    onShowToast={showToast}
-                  />
-                )}
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <Toast toast={toast} />
-      </div>
+      <Routes>
+        <Route path="/" element={
+          <MarketingLayout>
+            <Landing />
+          </MarketingLayout>
+        } />
+        <Route path="/pricing" element={
+          <MarketingLayout>
+            <Pricing />
+          </MarketingLayout>
+        } />
+        <Route path="/login" element={
+          <AuthPage
+            isRegistering={isRegistering}
+            onLogin={(token, user) => { handleLogin(token, user); }}
+            onRegister={(token, user) => { handleLogin(token, user); setIsRegistering(false); }}
+            onSwitchToLogin={() => setIsRegistering(false)}
+            onSwitchToRegister={() => setIsRegistering(true)}
+            showToast={showToast}
+            onBack={() => navigate('/')}
+          />
+        } />
+      </Routes>
     );
   }
 
