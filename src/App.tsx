@@ -136,6 +136,7 @@ export default function App() {
         const user = JSON.parse(userStr);
         setCurrentUser(user);
         setIsLoggedIn(true);
+        setIsLoadingProjects(true); // 同步置为 loading，防止闪烁"暂无审查数据"
       } catch (e) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -189,6 +190,7 @@ export default function App() {
   const handleLogin = (token: string, user: User) => {
     setCurrentUser(user);
     setIsLoggedIn(true);
+    setIsLoadingProjects(true); // 同步置为 loading，防止闪烁"暂无审查数据"
     setCurrentView('overview');
   };
 
