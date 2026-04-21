@@ -10,9 +10,10 @@ interface RegisterProps {
   onRegister: (token: string, user: User) => void;
   onSwitchToLogin: () => void;
   onShowToast?: (message: string, type?: 'success' | 'error') => void;
+  onBack?: () => void;
 }
 
-export default function Register({ onRegister, onSwitchToLogin, onShowToast }: RegisterProps) {
+export default function Register({ onRegister, onSwitchToLogin, onShowToast, onBack }: RegisterProps) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -74,6 +75,17 @@ export default function Register({ onRegister, onSwitchToLogin, onShowToast }: R
       {/* Background decoration */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-300/20 blur-[100px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-teal-300/20 blur-[100px] pointer-events-none" />
+
+      {/* 返回首页按钮 */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-6 left-6 z-20 group text-sm text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-1.5 font-medium"
+        >
+          <span className="group-hover:-translate-x-1 transition-transform">←</span>
+          返回首页
+        </button>
+      )}
 
       <motion.div 
         initial={{ opacity: 0, y: 20, scale: 0.95 }}

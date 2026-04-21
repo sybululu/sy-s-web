@@ -59,31 +59,22 @@ function AuthPage({
   onBack: () => void;
 }) {
   return (
-    <div className="hero-marketing min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md relative z-10">
-        {/* 返回按钮 */}
-        <button
-          onClick={onBack}
-          className="group absolute -top-14 left-0 text-sm text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-1.5 font-medium"
-        >
-          <span className="group-hover:-translate-x-1 transition-transform">←</span>
-          返回首页
-        </button>
-
-        {isRegistering ? (
+    <div>
+      {isRegistering ? (
           <Register
             onRegister={(token, user) => { onRegister(token, user); }}
             onSwitchToLogin={onSwitchToLogin}
             onShowToast={showToast}
+            onBack={onBack}
           />
         ) : (
           <Login
             onLogin={onLogin}
             onSwitchToRegister={onSwitchToRegister}
             onShowToast={showToast}
+            onBack={onBack}
           />
         )}
-      </div>
       <Toast toast={{ message: '', type: 'success', visible: false }} />
     </div>
   );
