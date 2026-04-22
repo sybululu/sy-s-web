@@ -110,7 +110,7 @@ export function mapRawToClause(raw: Record<string, any>, index?: number): Clause
   const weight = rawWeight ?? getViolationWeight(categoryId);
 
   return {
-    id: raw.id ?? `CL-${String(raw.violation_id ?? raw.category ?? 0)}-${(raw.snippet ?? raw.original_text ?? '').slice(0, 8)}`,
+    id: raw.id ?? `V${String((index ?? 0) + 1).padStart(3, '0')}`,
     originalText: raw.original_text ?? raw.originalText ?? raw.snippet ?? '',
     suggestedText: raw.suggested_text ?? raw.suggestedText ?? '【系统建议】请根据合规要求修改。',
     reason: raw.indicator ?? raw.reason ?? getViolationName(categoryId),
@@ -172,7 +172,7 @@ export function mapRawToClauses(rawClauses: Record<string, any>[]): Clause[] {
     const maxProb = Math.max(...violations.map(v => v.confidence));
 
     return {
-      id: first.id ?? `CL-${String(first.violation_id ?? first.category ?? 0)}-${(first.snippet ?? first.original_text ?? '').slice(0, 8)}`,
+      id: first.id ?? `V${String(idx + 1).padStart(3, '0')}`,
       originalText: snippet,
       suggestedText: first.suggested_text ?? first.suggestedText ?? '【系统建议】请根据合规要求修改。',
       reason: violations.map(v => v.name).join('、'),

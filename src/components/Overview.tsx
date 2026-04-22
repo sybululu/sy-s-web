@@ -301,8 +301,9 @@ export default function Overview({ currentProject, projects, onViewChange, onRis
           </div>
           <div className="p-6 flex-1 min-h-[250px]">
             {trendData.length > 1 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <div style={{ width: '100%', height: 250 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
                   <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dx={-10} />

@@ -459,7 +459,7 @@ export default function App() {
               className="h-full"
             >
               {currentView === 'overview' && (
-                <Overview currentProject={displayProject} projects={projects} onViewChange={handleViewChange} onRiskFilter={handleRiskFilter} isLoading={isLoadingProjects} />
+                <Overview key={currentProject?.id ?? 'loading'} currentProject={displayProject} projects={projects} onViewChange={handleViewChange} onRiskFilter={handleRiskFilter} isLoading={isLoadingProjects} />
               )}
               {currentView === 'new-task' && (
                 <NewTask onStartAnalysis={handleStartAnalysis} />
