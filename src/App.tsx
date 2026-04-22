@@ -137,6 +137,8 @@ export default function App() {
         setCurrentUser(user);
         setIsLoggedIn(true);
         setIsLoadingProjects(true); // 同步置为 loading，防止闪烁"暂无审查数据"
+        // 关键修复：检测到有效 token 后导航到产品首页，避免 URL 停留在营销站路由导致空白
+        navigate('/', { replace: true });
       } catch (e) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -194,6 +196,8 @@ export default function App() {
     setIsLoggedIn(true);
     setIsLoadingProjects(true); // 同步置为 loading，防止闪烁"暂无审查数据"
     setCurrentView('overview');
+    // 关键修复：登录成功后立即导航到产品首页，避免 URL 停留在 /login 导致路由上下文异常
+    navigate('/', { replace: true });
   };
 
   const handleLogout = () => {
