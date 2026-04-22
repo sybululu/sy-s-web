@@ -109,7 +109,8 @@ export default function Overview({ currentProject, projects, onViewChange, onRis
 
   // Calculate dynamic global stats
   const totalAudits = projects.length;
-  const totalClauses = projects.reduce((acc, p) => acc + p.clauses.length, 0);
+  // 累计发现问题：当前项目条款数（projects 列表仅含基础信息，clauses 仅在 currentProject 中加载）
+  const totalClauses = currentProject?.clauses?.length || 0;
   const avgScore = projects.length > 0 
     ? (projects.reduce((acc, p) => acc + p.score, 0) / projects.length).toFixed(1) 
     : '0.0';
