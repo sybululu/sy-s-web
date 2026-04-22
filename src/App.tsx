@@ -162,12 +162,19 @@ export default function App() {
               clauseCount: 0,
               clauses: []
             }));
-            setProjects(mappedProjects);
             if (mappedProjects.length > 0) {
+              // 先在内存中加载 clauses，构建完整对象后再一次性 setState
+              // 避免 currentProject 出现 {clauses:[]} 的中间态导致 overview 空白
               const firstProject = mappedProjects[0];
-              setCurrentProject(firstProject);
-              // 等待 clauses 加载完成后再关闭 loading，避免 overview 用空数据渲染
-              await loadProjectDetails(firstProject);
+              const detail = await api.getProject(String(firstProject.id));
+              const fullProject: Project = {
+                ...firstProject,
+                clauses: mapRawToClauses(detail.violations || []),
+              };
+              setProjects(mappedProjects);
+              setCurrentProject(fullProject);
+            } else {
+              setProjects(mappedProjects);
             }
           } else {
             console.error('Expected array from API, got:', data);
