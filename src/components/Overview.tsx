@@ -28,6 +28,8 @@ const itemVariants = {
 };
 
 export default function Overview({ currentProject, projects, onViewChange, onRiskFilter, isLoading }: OverviewProps) {
+  console.log('[Overview] render, isLoading=', isLoading, 'currentProject=', !!currentProject, 'clauses=', currentProject?.clauses?.length);
+
   // Loading 状态：正在加载审查历史
   if (isLoading) {
     return (
@@ -83,20 +85,24 @@ export default function Overview({ currentProject, projects, onViewChange, onRis
   // Calculate dynamic stats for current project
   // 遍历每条 clause 的 violations 数组，逐条统计各风险级别（一条 clause 可能触发多种不同级别的违规）
   let highCount = 0, mediumCount = 0, lowCount = 0;
-  currentProject.clauses.forEach(c => {
-    if (c.violations && c.violations.length > 0) {
-      for (const v of c.violations) {
-        if (v.riskLevel === RISK_LEVEL.HIGH) highCount++;
-        else if (v.riskLevel === RISK_LEVEL.MEDIUM) mediumCount++;
+  try {
+    (currentProject.clauses || []).forEach(c => {
+      if (c.violations && c.violations.length > 0) {
+        for (const v of c.violations) {
+          if (v.riskLevel === RISK_LEVEL.HIGH) highCount++;
+          else if (v.riskLevel === RISK_LEVEL.MEDIUM) mediumCount++;
+          else lowCount++;
+        }
+      } else {
+        const rl = c.riskLevel || '';
+        if (rl === RISK_LEVEL.HIGH) highCount++;
+        else if (rl === RISK_LEVEL.MEDIUM) mediumCount++;
         else lowCount++;
       }
-    } else {
-      // 兜底：无 violations 数组时使用 clause 级别的 riskLevel
-      if (c.riskLevel === RISK_LEVEL.HIGH) highCount++;
-      else if (c.riskLevel === RISK_LEVEL.MEDIUM) mediumCount++;
-      else lowCount++;
-    }
-  });
+    });
+  } catch (e) {
+    console.error('[Overview] 风险统计计算异常:', e);
+  }
 
   // 总违规数（用于进度条百分比计算，= 各级之和）
   const totalRiskCount = highCount + mediumCount + lowCount;
@@ -110,17 +116,21 @@ export default function Overview({ currentProject, projects, onViewChange, onRis
 
   // Calculate top risk categories for current project
   // 按每个独立违规类型统计（遍历每条 clause 的 violations 数组）
-  const categoryCounts = currentProject.clauses.reduce((acc, clause) => {
-    // 聚合模式：clause.violations 包含该句触发的所有违规明细
-    if (clause.violations && clause.violations.length > 0) {
-      for (const v of clause.violations) {
-        const catKey = v.name || v.id;
+  const categoryCounts = (currentProject.clauses || []).reduce((acc, clause) => {
+    try {
+      // 聚合模式：clause.violations 包含该句触发的所有违规明细
+      if (clause.violations && clause.violations.length > 0) {
+        for (const v of clause.violations) {
+          const catKey = v.name || v.id || '未知';
+          acc[catKey] = (acc[catKey] || 0) + 1;
+        }
+      } else {
+        // 兜底：无 violations 数组时用 categoryName
+        const catKey = clause.categoryName || String(clause.category || '未知');
         acc[catKey] = (acc[catKey] || 0) + 1;
       }
-    } else {
-      // 兜底：无 violations 数组时用 categoryName
-      const catKey = clause.categoryName || clause.category;
-      acc[catKey] = (acc[catKey] || 0) + 1;
+    } catch (e) {
+      console.error('[Overview] 分类统计异常:', e, clause);
     }
     return acc;
   }, {} as Record<string, number>);

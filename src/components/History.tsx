@@ -158,7 +158,7 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
                       onClick={() => onSelectProject(project)}
                       className="hover:bg-white/50 transition-colors cursor-pointer group"
                     >
-                      <td className="px-6 py-4 text-sm font-mono text-ink-muted">{project.date}</td>
+                      <td className="px-6 py-4 text-sm font-mono text-ink-muted whitespace-nowrap">{project.date}</td>
                       <td className="px-6 py-4">
                         <div className="font-medium text-ink mb-1">{project.name}</div>
                         <div className="text-xs text-ink-muted line-clamp-1 max-w-md">{project.description}</div>

@@ -420,11 +420,14 @@ export default function App() {
     p.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredClauses = currentProject?.clauses.filter(c =>
-    c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.snippet.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredClauses = currentProject?.clauses.filter(c => {
+    try {
+      const q = searchQuery.toLowerCase();
+      return String(c.id).toLowerCase().includes(q) ||
+        String(c.category || '').toLowerCase().includes(q) ||
+        (c.snippet || '').toLowerCase().includes(q);
+    } catch { return false; }
+  }) || [];
 
   const displayProject = currentProject ? { ...currentProject, clauses: filteredClauses } : null;
 
