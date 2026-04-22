@@ -150,7 +150,7 @@ export default function App() {
     if (isLoggedIn) {
       setIsLoadingProjects(true);
       api.getProjects()
-        .then(data => {
+        .then(async (data) => {
           if (Array.isArray(data)) {
             const mappedProjects: Project[] = data.map((p: any) => ({
               id: p.id,
@@ -163,12 +163,11 @@ export default function App() {
               clauses: []
             }));
             setProjects(mappedProjects);
-            // 设置当前项目并立即加载 clauses，确保 overview 首次渲染即展示完整数据
             if (mappedProjects.length > 0) {
               const firstProject = mappedProjects[0];
               setCurrentProject(firstProject);
-              // 立即加载 clauses：overview 的风险分布/违规类型/统计卡片全部依赖此数据
-              loadProjectDetails(firstProject);
+              // 等待 clauses 加载完成后再关闭 loading，避免 overview 用空数据渲染
+              await loadProjectDetails(firstProject);
             }
           } else {
             console.error('Expected array from API, got:', data);
