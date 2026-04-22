@@ -314,6 +314,7 @@ export default function Overview({ currentProject, projects, onViewChange, onRis
                   <Line type="monotone" dataKey="score" stroke="#2d2d2d" strokeWidth={2} dot={{ r: 4, fill: '#2d2d2d', strokeWidth: 0 }} activeDot={{ r: 6, fill: '#d97757', strokeWidth: 0 }} />
                 </LineChart>
               </ResponsiveContainer>
+              </div>
             ) : (
               <div className="h-full flex items-center justify-center text-ink-muted text-sm">
                 数据不足，需至少完成 2 次审查以生成趋势图
