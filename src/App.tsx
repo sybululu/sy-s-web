@@ -149,46 +149,64 @@ export default function App() {
   useEffect(() => {
     if (isLoggedIn) {
       setIsLoadingProjects(true);
+      console.log('[App] 开始加载项目列表...');
       api.getProjects()
         .then(async (data) => {
+          console.log('[App] getProjects 返回:', JSON.stringify(data)?.slice(0, 200));
           if (Array.isArray(data)) {
             const mappedProjects: Project[] = data.map((p: any) => ({
               id: p.id,
               name: p.name,
-              date: p.created_at.split('T')[0],
+              date: p.created_at?.split('T')[0] || '',
               description: `审查得分: ${p.score}，风险等级: ${p.risk_level}`,
               score: p.score,
               riskStatus: p.risk_level,
               clauseCount: 0,
               clauses: []
             }));
+            console.log('[App] 项目数量:', mappedProjects.length);
             if (mappedProjects.length > 0) {
-              // 先在内存中加载 clauses，构建完整对象后再一次性 setState
-              // 避免 currentProject 出现 {clauses:[]} 的中间态导致 overview 空白
               const firstProject = mappedProjects[0];
-              const detail = await api.getProject(String(firstProject.id));
-              const fullProject: Project = {
-                ...firstProject,
-                clauses: mapRawToClauses(detail.violations || []),
-              };
-              setProjects(mappedProjects);
-              setCurrentProject(fullProject);
+              console.log('[App] 正在加载首个项目详情, id=', firstProject.id);
+              try {
+                const detail = await api.getProject(String(firstProject.id));
+                console.log('[App] getProject 返回 violations 数量:', detail?.violations?.length);
+                const fullProject: Project = {
+                  ...firstProject,
+                  clauses: mapRawToClauses(detail.violations || []),
+                };
+                console.log('[App] 映射后 clauses 数量:', fullProject.clauses.length);
+                setProjects(mappedProjects);
+                setCurrentProject(fullProject);
+              } catch (detailErr) {
+                console.error('[App] getProject 失败:', detailErr);
+                // 详情加载失败时仍展示基础信息（score/riskStatus），clauses 为空
+                setProjects(mappedProjects);
+                setCurrentProject(firstProject);
+              }
             } else {
+              console.log('[App] 项目列表为空');
               setProjects(mappedProjects);
+              setCurrentProject(null);
             }
           } else {
-            console.error('Expected array from API, got:', data);
+            console.error('[App] getProjects 返回非数组:', typeof data, data);
             setProjects([]);
+            setCurrentProject(null);
           }
         })
         .catch(err => {
-          console.error('Failed to fetch projects:', err);
+          console.error('[App] getProjects 请求失败:', err);
           setProjects([]);
+          setCurrentProject(null);
           if (err.code !== 'UNAUTHORIZED') {
             showToast(err.message || '无法连接到后端服务，请检查 API 地址配置', 'error');
           }
         })
-        .finally(() => setIsLoadingProjects(false));
+        .finally(() => {
+          console.log('[App] 加载完成, isLoading→false');
+          setIsLoadingProjects(false);
+        });
     }
   }, [isLoggedIn]);
 
