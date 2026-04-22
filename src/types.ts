@@ -103,6 +103,16 @@ import { getViolationName, getViolationWeight, getRiskLevel } from './config/vio
  * @param raw - 后端返回的 clause 原始对象（字段名可能为 camel_case 或 camelCase）
  * @param index - 可选的序号，用于生成 id 和默认 location
  */
+// 基于内容生成固定"随机"编号（同一条款永远相同）
+function stableRandomId(seed: string): string {
+  let h = 2166136261 ^ seed.length;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return String((h % 90000) + 10000);
+}
+
 export function mapRawToClause(raw: Record<string, any>, index?: number): Clause {
   const categoryId = raw.violation_id ?? raw.category ?? 0;
   // 优先使用后端返回的 weight，兼容 confidence/probability 等字段名
@@ -110,7 +120,7 @@ export function mapRawToClause(raw: Record<string, any>, index?: number): Clause
   const weight = rawWeight ?? getViolationWeight(categoryId);
 
   return {
-    id: raw.id ?? `V${String((index ?? 0) + 1).padStart(3, '0')}`,
+    id: raw.id ?? `V${stableRandomId(raw.snippet ?? raw.original_text ?? String(categoryId))}`,
     originalText: raw.original_text ?? raw.originalText ?? raw.snippet ?? '',
     suggestedText: raw.suggested_text ?? raw.suggestedText ?? '【系统建议】请根据合规要求修改。',
     reason: raw.indicator ?? raw.reason ?? getViolationName(categoryId),
@@ -172,7 +182,7 @@ export function mapRawToClauses(rawClauses: Record<string, any>[]): Clause[] {
     const maxProb = Math.max(...violations.map(v => v.confidence));
 
     return {
-      id: first.id ?? `V${String(idx + 1).padStart(3, '0')}`,
+      id: first.id ?? `V${stableRandomId(first.snippet ?? first.original_text ?? String(idx))}`,
       originalText: snippet,
       suggestedText: first.suggested_text ?? first.suggestedText ?? '【系统建议】请根据合规要求修改。',
       reason: violations.map(v => v.name).join('、'),
