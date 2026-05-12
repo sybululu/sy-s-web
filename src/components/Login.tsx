@@ -96,7 +96,7 @@ export default function Login({ onLogin, onSwitchToRegister, onShowToast, onBack
             <ShieldCheck className="w-6 h-6" />
           </motion.div>
           <h1 className="text-3xl font-serif text-ink tracking-tight mb-1">智审合规</h1>
-          <p className="text-ink-muted text-sm">隐私政策合规性分析系统</p>
+          <p className="text-ink-muted text-sm">基于NLP的隐私政策合规性分析系统</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
