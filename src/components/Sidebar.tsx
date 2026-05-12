@@ -35,7 +35,7 @@ export default function Sidebar({ currentView, onViewChange, onLogout, currentUs
           </div>
           <div className="text-xl font-serif text-ink tracking-tight">智审合规</div>
         </div>
-        <div className="text-ink-muted text-xs font-medium mt-1">NLP 隐私政策审查</div>
+        <div className="text-ink-muted text-xs font-medium mt-1">隐私政策合规性分析系统</div>
       </div>
       
       <nav className="flex-1 space-y-1">
