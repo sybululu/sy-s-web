@@ -7,10 +7,10 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center gap-8">
           <div className="flex items-center gap-2 text-slate-900 font-bold text-xl">
             <ShieldCheck className="w-6 h-6 text-indigo-600" />
-            PrivacyGuard
+            智审合规
           </div>
           <div className="text-slate-500 text-xs font-mono uppercase tracking-widest">
-            © 2026 PrivacyGuard
+            © 2026 智审合规
           </div>
         </div>
         <div className="flex gap-10">

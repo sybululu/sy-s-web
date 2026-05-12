@@ -426,7 +426,7 @@ export default function Landing() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
             </span>
-            <span className="text-xs font-semibold tracking-widest uppercase font-mono">PrivacyGuard 1.0 is live</span>
+            <span className="text-xs font-semibold tracking-widest uppercase font-mono">智审合规 1.0 is live</span>
           </motion.div>
 
           {/* Heading */}

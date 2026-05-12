@@ -1,7 +1,7 @@
 # 隐私政策合规审查系统 — 完整工作流与接口文档
 
-> **版本**: v3.0 (单项目双模式架构 + 新版 Hero 营销站)
-> **最后更新**: 2026-04-21
+> **版本**: v3.1 (AuthPage全屏路由 + FNV-1a稳定ID + PolicyModal + Overview联动筛选)
+> **最后更新**: 2026-04-22
 > **适用范围**: 前端 `sy-s-web` + 后端 `sy-s-web-backend` 全链路
 
 ---
@@ -107,6 +107,32 @@
 
 ### 1.3 双模式路由实现细节
 
+#### 路由架构演进（v3.1 更新）
+
+```
+v3.0 (旧):                          v3.1 (当前):
+┌────────────────────┐              ┌──────────────────────────────────┐
+│ Hero 营销站         │              │ React Router <Routes>           │
+│ + Login overlay     │              │                                  │
+│ (弹窗形式)          │              │  /      → MarketingLayout       │
+│                    │              │           └─ Landing             │
+│ CTA按钮拦截→弹窗    │              │                                  │
+│                    │              │  /pricing → MarketingLayout      │
+└────────────────────┘              │           └─ Pricing             │
+                                     │                                  │
+                                     │  /login  → AuthPage (全屏)       │
+                                     │           ├─ Login (独立页面)    │
+                                     │           └─ Register (独立页面) │
+                                     │                                  │
+                                     │  已登录: / → B端产品 (replace)   │
+                                     └──────────────────────────────────┘
+```
+
+**关键变化**:
+- 登录/注册从 **overlay 弹窗** 升级为 **全屏独立路由页面** (`/login`)
+- Hero 的 CTA 按钮不再弹窗，而是 `navigate('/login')` 跳转
+- 登录成功 / Token 恢复后执行 `navigate('/', { replace: true })` 确保URL干净
+
 #### 入口文件 (`main.tsx`)
 
 ```tsx
@@ -115,22 +141,27 @@
 </BrowserRouter>
 ```
 
-#### App.tsx 核心逻辑
+#### App.tsx 核心逻辑（v3.1 路由版）
 
 ```tsx
-// 未登录 → 营销站（Hero Navbar + Landing + Footer + 登录弹窗 overlay）
+// 未登录 → 营销站路由组（Hero Navbar + Landing/Pricing + Footer）
 if (!isLoggedIn) {
   return (
-    <div className="hero-marketing min-h-screen">
-      <Navbar />       // 滚动隐藏导航栏（含"立即体验"按钮）
-      <Landing />      // 营销首页（ColorBends波浪背景 + FlipCard + 合规数据演示）
-      <Footer />       // 页脚
-      {/* 登录/注册弹窗 */}
-      {showAuthModal && (
-        <Login onLogin={handleLogin} />
-        // 或 <Register onRegister={...} />
-      )}
-    </div>
+    <Routes>
+      <Route path="/" element={<MarketingLayout><Landing /></MarketingLayout>} />
+      <Route path="/pricing" element={<MarketingLayout><Pricing /></MarketingLayout>} />
+      <Route path="/login" element={
+        <AuthPage                          // ← 全屏认证页(非弹窗)
+          isRegistering={isRegistering}
+          onLogin={handleLogin}            // 登录成功→navigate('/',{replace:true})
+          onRegister={handleRegister}
+          onSwitchToLogin={...}
+          onSwitchToRegister={...}
+          showToast={showToast}
+          onBack={() => navigate('/')}    // 返回营销站首页
+        />
+      } />
+    </Routes>
   );
 }
 
@@ -144,9 +175,9 @@ return (
 );
 ```
 
-#### CTA 按钮事件拦截机制
+#### CTA 按钮事件拦截机制（v3.1 更新）
 
-Hero 组件（Landing.tsx / Navbar.tsx）中的"立即体验"/"立即开始使用"按钮**不需要修改**，通过全局事件拦截桥接到 B 端登录：
+Hero 组件中的"立即体验"/"立即开始使用"按钮通过全局事件拦截桥接到登录路由：
 
 ```tsx
 useEffect(() => {
@@ -158,36 +189,55 @@ useEffect(() => {
       (target.textContent?.includes('立即体验') || target.textContent?.includes('立即开始使用'))
     ) {
       e.preventDefault();
-      setShowAuthModal(true);   // 弹出 B 端登录框
+      e.stopPropagation();
       setIsRegistering(false);
+      navigate('/login');         // ← v3.1: 从弹窗改为路由跳转
     }
   };
   document.addEventListener('click', handleExperienceClick, true);
   return () => document.removeEventListener('click', handleExperienceClick, true);
-}, [isLoggedIn]);
+}, [isLoggedIn, navigate]);
 ```
 
-**设计优势**：Hero 组件保持独立可复用，不耦合 B 端业务逻辑。
+#### Token 恢复与导航修复
 
-### 1.4 前端目录结构（更新后）
+```tsx
+// 页面刷新时检测 localStorage 中的 token
+useEffect(() => {
+  const token = localStorage.getItem('token');
+  const userStr = localStorage.getItem('user');
+  if (token && userStr) {
+    const user = JSON.parse(userStr);
+    setCurrentUser(user);
+    setIsLoggedIn(true);
+    setIsLoadingProjects(true);       // 防止闪烁"暂无审查数据"
+    navigate('/', { replace: true }); // ★ 关键修复：确保URL不在/login或营销站路由
+  }
+}, []);
+```
+
+### 1.4 前端目录结构（v3.1 更新后）
 
 ```
 src/
 ├── main.tsx                    # 入口（BrowserRouter 包裹）
-├── App.tsx                     # 双模式路由分发
+├── App.tsx                     # 双模式路由分发 + 全局状态中心
+│                               #   v3.1: Routes路由组 + AuthPage全屏认证
 ├── index.css                   # 合并样式（B端 + Hero）
 │
 ├── components/
 │   ├── B端组件（已登录时使用）:
 │   │   ├── Sidebar.tsx         # 左侧导航
-│   │   ├── Header.tsx          # 顶部标题栏
-│   │   ├── Overview.tsx        # 总览仪表盘
-│   │   ├── NewTask.tsx         # 新建审查任务
-│   │   ├── Details.tsx         # 违规条款明细
-│   │   ├── History.tsx         # 历史报告
-│   │   ├── Drawer.tsx          # 整改侧边面板
-│   │   ├── Login.tsx           # 登录（overlay 弹窗形式）
-│   │   └── Register.tsx        # 注册
+│   │   ├── Header.tsx          # 顶部标题栏(含搜索)
+│   │   ├── Overview.tsx        # 总览仪表盘(评分环/风险分布/趋势图/频发类型)
+│   │   ├── NewTask.tsx         # 新建审查任务(文本/文件/URL三输入)
+│   │   ├── Details.tsx         # 违规条款明细表格(聚合展示+筛选+分页)
+│   │   ├── History.tsx         # 历史报告列表
+│   │   ├── Drawer.tsx          # 整改侧边面板(summary/rewrite双模式+缓存+diff)
+│   │   ├── Login.tsx           # 登录(全屏独立页面，非弹窗)
+│   │   ├── Register.tsx        # 注册(全屏独立页面)
+│   │   ├── Toast.tsx           # 全局浮动提示
+│   │   └── PolicyModal.tsx     # 隐私政策阅读弹窗(滚动进度条+阅读确认) ★新增
 │   │
 │   └── Hero 营销站组件（未登录时使用）:
 │       ├── Navbar.tsx          # 导航栏（滚动隐藏 + toast 提示）
@@ -204,9 +254,11 @@ src/
 │   ├── Pricing.tsx             # 定价页（4档含政企信创版）
 │   └── Dashboard.tsx           # 仪表盘展示页
 │
-├── types.ts                    # 类型定义
-├── config/                     # 配置文件
-└── utils/api.ts                # API 请求层
+├── types.ts                    # 类型定义 + mapRawToClause/mapRawToClauses + stableRandomId
+├── config/
+│   └── violation-config.ts     # 12类违规配置统一源(SSOT)
+└── utils/
+    └── api.ts                  # API 请求层(14个方法 + apiFetch核心)
 ```
 
 ### 2.1 后端违规指标体系 (`violation_config.py`) — 唯一权威数据源
@@ -1036,7 +1088,34 @@ llm_github = OpenAI(
 
 ### 3.8 前端聚合展示
 
-#### 3.8.1 后端→前端数据映射 (`types.ts:mapRawToClauses`)
+#### 3.8.1 FNV-1a 稳定ID算法 (`types.ts:stableRandomId`) ★v3.1新增
+
+**问题**: 旧版用 `Math.random()` 生成条款ID → 每次刷新页面ID变化 → 无法稳定追踪同一条款
+
+**解决**: 基于条款内容生成固定哈希值（FNV-1a），同一条款永远相同ID：
+
+```typescript
+function stableRandomId(seed: string): string {
+  let h = 2166136261 ^ seed.length;           // FNV offset basis (32-bit)
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);                   // XOR each byte
+    h = (h * 16777619) >>> 0;                 // FNV prime, >>>0 保持无符号
+  }
+  return String((h % 90000) + 10000);          // 映射到 V10000~V99999
+}
+
+// 使用示例:
+// stableRandomId("我们会收集您的位置信息") → "V38291" (永远不变)
+// stableRandomId("我们会收集您的位置信息") → "V38291" (再次调用仍相同)
+```
+
+**ID 格式变化**:
+| 版本 | ID格式 | 稳定性 |
+|------|--------|--------|
+| v3.0 | `CL-{1000~9999}` 随机 | 每次刷新变 |
+| v3.1 | `V{10000~99999}` 哈希 | **永久固定** |
+
+#### 3.8.2 后端→前端数据映射 (`types.ts:mapRawToClauses`)
 
 **核心逻辑**: 按句子内容 (`snippet`) 分组，同句触发的多个违规合并为一行。
 
