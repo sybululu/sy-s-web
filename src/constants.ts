@@ -5,7 +5,7 @@
  */
 
 /** 隐私政策范文（用于登录/注册页面的政策弹窗展示） */
-export const PRIVACY_POLICY_TEXT = `智审合规隐私政策
+export const PRIVACY_POLICY_TEXT = `基于NLP的隐私政策合规性分析系统隐私政策
 
 版本号：1.0
 生效日期：2025年1月1日（2025年XX月XX日更新）
