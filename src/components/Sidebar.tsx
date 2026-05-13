@@ -72,7 +72,7 @@ export default function Sidebar({ currentView, onViewChange, onLogout, currentUs
           </div>
           <div>
             <div className="text-sm font-medium text-ink">{displayName}</div>
-            <div className="text-[10px] text-ink-muted">合规审计员</div>
+            <div className="text-[10px] text-ink-muted">合规审查员</div>
           </div>
         </div>
         <button

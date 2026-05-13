@@ -156,7 +156,7 @@ export default function Overview({ currentProject, projects, onViewChange, onRis
     >
       <motion.div variants={itemVariants} className="flex justify-between items-end">
         <div>
-          <h2 className="text-3xl font-serif text-ink tracking-tight mb-1">审计总览</h2>
+          <h2 className="text-3xl font-serif text-ink tracking-tight mb-1">审查总览</h2>
           <p className="text-ink-muted text-sm">实时合规健康度与风险态势感知</p>
         </div>
         <button
@@ -164,7 +164,7 @@ export default function Overview({ currentProject, projects, onViewChange, onRis
           className="bg-ink text-white px-5 py-2.5 rounded-md font-medium text-sm flex items-center gap-2 hover:bg-ink/90 transition-colors shadow-sm"
         >
           <Upload className="w-4 h-4" />
-          开始新审计
+          开始新审查
         </button>
       </motion.div>
 

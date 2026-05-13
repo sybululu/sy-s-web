@@ -109,7 +109,7 @@ export default function Register({ onRegister, onSwitchToLogin, onShowToast, onB
             <ShieldCheck className="w-6 h-6" />
           </motion.div>
           <h1 className="text-3xl font-serif text-ink tracking-tight mb-1">创建新账户</h1>
-          <p className="text-ink-muted text-sm">开始您的高级合规审计之旅</p>
+          <p className="text-ink-muted text-sm">开始您的高级合规审查之旅</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }}>
@@ -198,7 +198,7 @@ export default function Register({ onRegister, onSwitchToLogin, onShowToast, onB
             disabled={isLoading}
             className="w-full bg-ink text-white font-medium py-2.5 rounded-lg hover:bg-ink/90 transition-colors shadow-sm mt-6 disabled:opacity-50"
           >
-            {isLoading ? '注册中...' : '完成注册'}
+            {isLoading ? '注册中...' : '注册'}
           </motion.button>
         </form>
       </motion.div>

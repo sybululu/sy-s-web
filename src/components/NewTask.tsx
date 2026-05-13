@@ -10,7 +10,7 @@ interface NewTaskProps {
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 // 允许的文件类型
-const ALLOWED_EXTENSIONS = ['.txt', '.md', '.json', '.csv'];
+const ALLOWED_EXTENSIONS = ['.txt', '.md', '.json'];
 
 // 验证文件
 function validateFile(file: File): { valid: boolean; error?: string } {
@@ -63,7 +63,7 @@ export default function NewTask({ onStartAnalysis }: NewTaskProps) {
     >
       <div className="mb-6 shrink-0">
         <h2 className="text-3xl font-serif text-ink tracking-tight mb-2">新建审查任务</h2>
-        <p className="text-ink-muted text-sm">支持多格式文本及 URL 实时抓取审计</p>
+        <p className="text-ink-muted text-sm">支持多格式文本及 URL 实时抓取审查</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 flex-1 min-h-0">
@@ -78,7 +78,7 @@ export default function NewTask({ onStartAnalysis }: NewTaskProps) {
             type="file" 
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
             onChange={handleFileChange}
-            accept=".txt,.md,.json,.csv"
+            accept=".txt,.md,.json"
           />
           <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] opacity-30"></div>
           

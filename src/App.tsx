@@ -358,7 +358,7 @@ export default function App() {
       setCurrentProject(newProject);
       setCurrentView('details');
       setSearchQuery('');
-      showToast('审计完成，已生成合规报告');
+      showToast('审查完成，已生成合规报告');
     } catch (error: any) {
       if (error.name === 'AbortError' || error.name === 'CanceledError') {
         showToast('已取消审查', 'error');
@@ -491,7 +491,7 @@ export default function App() {
       {isAnalyzing && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[200] flex flex-col items-center justify-center">
           <div className="w-16 h-16 border-4 border-slate-200 border-t-ink rounded-full animate-spin mb-6"></div>
-          <h3 className="text-xl font-serif text-ink tracking-tight mb-2">深度审计中</h3>
+          <h3 className="text-xl font-serif text-ink tracking-tight mb-2">深度审查中</h3>
           <p className="text-sm text-ink-muted font-mono animate-pulse mb-6">{analysisStep}</p>
           <button
             onClick={cancelAnalysis}

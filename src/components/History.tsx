@@ -89,7 +89,7 @@ export default function History({ projects, onSelectProject }: HistoryProps) {
       <motion.div variants={itemVariants} className="flex justify-between items-end shrink-0">
         <div>
           <h2 className="text-3xl font-serif text-ink tracking-tight mb-1">历史审查报告</h2>
-          <p className="text-ink-muted text-sm">所有已完成的隐私政策审计档案</p>
+          <p className="text-ink-muted text-sm">所有已完成的隐私政策审查档案</p>
         </div>
       </motion.div>
 
