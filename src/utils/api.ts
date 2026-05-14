@@ -171,7 +171,7 @@ export const api = {
     }),
   
   // 历史记录
-  getProjects: (): Promise<Array<{ id: string; name: string; score: number; risk_level: string; created_at: string }>> => apiFetch('/api/v1/projects'),
+  getProjects: (): Promise<Array<{ id: string; name: string; score: number; risk_level: string; created_at: string; clauseCount?: number }>> => apiFetch('/api/v1/projects'),
   
   getProject: (id: string): Promise<{
     id: string;
