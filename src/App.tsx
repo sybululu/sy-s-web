@@ -161,7 +161,7 @@ export default function App() {
               description: `审查得分: ${p.score}，风险等级: ${p.risk_level}`,
               score: p.score,
               riskStatus: p.risk_level,
-              clauseCount: 0,
+              clauseCount: p.clauseCount || 0,
               clauses: []
             }));
             console.log('[App] 项目数量:', mappedProjects.length);
