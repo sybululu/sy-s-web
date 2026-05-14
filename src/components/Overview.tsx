@@ -109,11 +109,14 @@ export default function Overview({ currentProject, projects, onViewChange, onRis
 
   // Calculate dynamic global stats
   const totalAudits = projects.length;
-  // 累计发现问题：跨所有历史审查项目的条款数汇总
-  const totalClauses = projects.reduce(
-    (acc, p) => acc + (p.clauses?.length || p.clauseCount || 0),
-    currentProject?.clauses?.length || 0
+  // 累计发现问题：跨所有历史审查项目的条款数汇总（projects已含当前项目，不再额外加）
+  const totalClausesFromProjects = projects.reduce(
+    (acc, p) => acc + (p.clauseCount || p.clauses?.length || 0),
+    0
   );
+  const totalClauses = totalClausesFromProjects > 0
+    ? totalClausesFromProjects
+    : (currentProject?.clauses?.length || 0);
   const avgScore = projects.length > 0 
     ? (projects.reduce((acc, p) => acc + p.score, 0) / projects.length).toFixed(1) 
     : '0.0';
